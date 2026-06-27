@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-mid: var(--mid);
+  --color-rule: var(--rule);
+  --color-surface: var(--surface);
+  --color-inverse-bg: var(--inverse-bg);
+  --color-inverse-fg: var(--inverse-fg);
+  --color-accent: var(--accent);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+
+  --font-display: var(--font-bebas-neue);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+:root {
+  /* Default mode (Paper) */
+  --ink: #0A0A0A;
+  --paper: #FAFAFA;
+  --mid: #888888;
+  --rule: #E2E2E2;
+  --surface: #F4F4F4;
+  --inverse-bg: #0A0A0A;
+  --inverse-fg: #FAFAFA;
+  --accent: #0A0A0A;
+  --destructive: #D62828;
+  --success: #1A7A4A;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark mode (Ink/Paper inverted) */
+    --ink: #FAFAFA;
+    --paper: #0A0A0A;
+    --mid: #888888;
+    --rule: #333333;
+    --surface: #171717;
+    --inverse-bg: #FAFAFA;
+    --inverse-fg: #0A0A0A;
+    --accent: #FAFAFA;
+    --destructive: #D62828;
+    --success: #1A7A4A;
+  }
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom visual rules from Blueprint */
+.full-ink-header {
+  background-color: var(--inverse-bg);
+  color: var(--inverse-fg);
+}
