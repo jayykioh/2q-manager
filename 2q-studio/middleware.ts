@@ -46,6 +46,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  if (user && (request.nextUrl.pathname === '/' || request.nextUrl.pathname.startsWith('/login'))) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/pos'
+    return NextResponse.redirect(url)
+  }
+
   // Allow the request to continue
   return supabaseResponse
 }
