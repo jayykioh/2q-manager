@@ -4,7 +4,11 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client } from "@/lib/s3-client";
 import { createClient } from "@/lib/supabase/server";
 
-// Simple in-memory rate limiter (MVP)
+// NOTE: This is a simple in-memory rate limiter for MVP purposes.
+// On Vercel Serverless, each cold start creates a new process instance,
+// meaning this Map resets between invocations. It still limits within a
+// single warm container, but is NOT a reliable distributed rate limiter.
+// For production-grade rate limiting, replace with Upstash Redis (@upstash/ratelimit).
 const rateLimitMap = new Map<string, { count: number; expiresAt: number }>();
 
 function checkRateLimit(ip: string): boolean {
