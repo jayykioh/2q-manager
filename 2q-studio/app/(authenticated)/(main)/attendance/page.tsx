@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { toast } from "sonner";
 
 const STAFF_COLORS = [
   "bg-amber-500",
@@ -66,14 +67,20 @@ export default function StaffAttendancePage() {
       p_store_id: storeId,
       p_shift_type: shiftType
     });
-    if (error) alert("Clock In Error: " + error.message);
-    else fetchAttendance();
+    if (error) toast.error("Clock In Error: " + error.message);
+    else {
+      toast.success("Chấm công vào ca thành công");
+      fetchAttendance();
+    }
   };
 
   const handleClockOut = async (attendanceId: string) => {
     const { error } = await supabase.rpc("clock_out", { p_attendance_id: attendanceId });
-    if (error) alert("Clock Out Error: " + error.message);
-    else fetchAttendance();
+    if (error) toast.error("Clock Out Error: " + error.message);
+    else {
+      toast.success("Đã check-out kết thúc ca!");
+      fetchAttendance();
+    }
   };
 
   const handleAssignShift = async (shiftType: string, date: Date) => {
@@ -86,7 +93,7 @@ export default function StaffAttendancePage() {
       p_shift_type: shiftType,
       p_shift_date: dateStr
     });
-    if (error) alert("Assign Error: " + error.message);
+    if (error) toast.error("Assign Error: " + error.message);
     else fetchAttendance();
   };
 
@@ -100,7 +107,7 @@ export default function StaffAttendancePage() {
       p_shift_type: shiftType,
       p_shift_date: dateStr
     });
-    if (error) alert("Unassign Error: " + error.message);
+    if (error) toast.error("Unassign Error: " + error.message);
     else fetchAttendance();
   };
 

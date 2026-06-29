@@ -4,6 +4,7 @@ import { useState } from "react";
 import imageCompression from "browser-image-compression";
 import { Loader2, Upload, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 interface ProductFormProps {
   onSuccess?: () => void;
@@ -38,6 +39,7 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const form = e.currentTarget;
     setLoading(true);
 
     try {
@@ -106,20 +108,20 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
 
       if (error) throw error;
 
-      alert("Sản phẩm đã được tạo!");
+      toast.success("Sản phẩm đã được tạo!");
       setImages([]);
-      e.currentTarget.reset();
+      form.reset();
       onSuccess?.();
     } catch (err: any) {
-      alert("Lỗi: " + err.message);
+      toast.error("Lỗi: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-lg bg-paper p-4 border border-rule">
-      <h2 className="font-display text-xl tracking-wide mb-4">Thêm sản phẩm mới</h2>
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-lg bg-paper p-4 border border-rule w-full">
+      <h2 className="font-sans font-bold text-xl uppercase tracking-wide mb-4">Thêm sản phẩm mới</h2>
       
       <div>
         <label className="block text-sm font-medium mb-1">Tên sản phẩm</label>

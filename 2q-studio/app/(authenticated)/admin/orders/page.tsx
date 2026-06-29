@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -29,8 +30,12 @@ export default function AdminOrdersPage() {
       p_reason: reason
     });
 
-    if (error) alert("Lỗi khi hủy: " + error.message);
-    else fetchOrders();
+    if (error) {
+      toast.error("Lỗi khi hủy: " + error.message);
+    } else {
+      toast.success("Đã hủy đơn hàng thành công!");
+      fetchOrders();
+    }
   };
 
   return (

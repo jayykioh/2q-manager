@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/stores/useCartStore";
 import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function StaffPosPage() {
   const [products, setProducts] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [lastOrder, setLastOrder] = useState<any>(null);
   const supabase = createClient();
   const cart = useCartStore();
@@ -43,8 +45,9 @@ export default function StaffPosPage() {
     });
 
     if (error) {
-      alert("Checkout thất bại: " + error.message);
+      toast.error("Checkout thất bại: " + error.message);
     } else {
+      toast.success("Thanh toán thành công!");
       // Save snapshot for print
       setLastOrder({
         id: data,
@@ -97,9 +100,19 @@ export default function StaffPosPage() {
       <div className="p-4 flex flex-col h-full lg:flex-row gap-4 print:hidden">
         {/* Product Grid */}
         <div className="flex-1">
-          <h2 className="font-sans text-xl font-medium mb-4">Sản phẩm có sẵn</h2>
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
+            <h2 className="font-sans text-xl font-medium">Sản phẩm có sẵn</h2>
+            <input 
+              type="text" 
+              placeholder="Tìm theo tên hoặc SKU..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="border border-rule p-2 rounded-sm w-full md:w-64 bg-paper"
+            />
+          </div>
+          
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[1px] bg-rule border border-rule">
-            {products.map((p) => {
+            {products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase())).map((p) => {
               const inCart = cart.items.some((i) => i.product_id === p.id);
               return (
                 <button

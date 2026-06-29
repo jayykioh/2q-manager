@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function AdminTransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -22,7 +23,8 @@ export default function AdminTransactionsPage() {
 
   const handleAddExpense = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
     const amount = Number(formData.get("amount"));
     const description = formData.get("description") as string;
     const category = formData.get("category") as string;
@@ -38,10 +40,11 @@ export default function AdminTransactionsPage() {
       recorded_by: user?.id
     });
 
-    if (error) alert("Lỗi: " + error.message);
-    else {
-      alert("Đã ghi nhận chi phí!");
-      e.currentTarget.reset();
+    if (error) {
+      toast.error("Lỗi: " + error.message);
+    } else {
+      toast.success("Đã ghi nhận chi phí!");
+      form.reset();
       fetchTransactions();
     }
   };
