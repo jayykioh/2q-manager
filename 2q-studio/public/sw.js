@@ -46,7 +46,10 @@ self.addEventListener('fetch', (event) => {
         if (response) {
           return response;
         }
-        // If not in cache and network fails, could return an offline page here
+        return new Response('Network error and no cache available', {
+          status: 503,
+          statusText: 'Service Unavailable'
+        });
       });
     })
   );

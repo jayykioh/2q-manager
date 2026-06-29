@@ -66,7 +66,7 @@ export default function AdminProductsPage() {
             // Get the primary image, or the first image, or fallback
             const images = p.product_images || [];
             const primaryImage = images.find((img: any) => img.is_primary) || images[0];
-            const imageUrl = primaryImage ? primaryImage.public_url : "https://via.placeholder.com/300?text=No+Image";
+            const imageUrl = (primaryImage && primaryImage.public_url) ? primaryImage.public_url : "https://via.placeholder.com/300?text=No+Image";
 
             return (
               <div key={p.id} className="bg-paper border border-rule flex flex-col group relative">

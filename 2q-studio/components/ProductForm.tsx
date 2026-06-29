@@ -74,9 +74,11 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
 
         if (!uploadRes.ok) throw new Error("Failed to upload image");
 
+        const r2PublicDomain = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
+        
         uploadedImages.push({
           r2_key: key,
-          public_url: null, // Private bucket MVP
+          public_url: r2PublicDomain ? `${r2PublicDomain}/${key}` : null,
           blur_data: null, // Skip MVP
           width: 1200,
           height: 1200,
