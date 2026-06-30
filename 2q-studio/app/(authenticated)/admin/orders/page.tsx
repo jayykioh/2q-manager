@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { BackButton } from "@/components/BackButton";
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -40,7 +41,10 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="p-4">
-      <h2 className="font-sans text-xl font-medium mb-4">Quản lý Tất cả Đơn hàng</h2>
+      <div className="flex items-center gap-2 mb-4">
+        <BackButton />
+        <h2 className="font-sans text-xl font-medium">Quản lý Tất cả Đơn hàng</h2>
+      </div>
       
       <div className="space-y-4">
         {orders.map((o) => (

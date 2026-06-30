@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowLeft, UserCog } from "lucide-react";
-import Link from "next/link";
+import { UserCog } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 
 type Profile = {
   id: string;
@@ -56,10 +56,8 @@ export default function AdminTeamPage() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin" className="p-2 border border-rule hover:bg-surface transition-colors">
-          <ArrowLeft size={20} />
-        </Link>
+      <div className="flex items-center gap-2 mb-6">
+        <BackButton />
         <h2 className="font-sans text-xl font-medium">Quản lý Nhân sự</h2>
       </div>
 

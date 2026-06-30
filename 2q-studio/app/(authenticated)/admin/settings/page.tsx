@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { BackButton } from "@/components/BackButton";
 
 export default function AdminSettingsPage() {
   const [profile, setProfile] = useState<any>(null);
@@ -63,10 +62,8 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin" className="p-2 border border-rule hover:bg-surface transition-colors">
-          <ArrowLeft size={20} />
-        </Link>
+      <div className="flex items-center gap-2 mb-6">
+        <BackButton />
         <h2 className="font-sans text-xl font-medium">Cài đặt Tài khoản</h2>
       </div>
 

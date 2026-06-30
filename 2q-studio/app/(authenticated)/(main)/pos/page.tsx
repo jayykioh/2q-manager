@@ -6,17 +6,22 @@ import { useCartStore } from "@/stores/useCartStore";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+// Self-hosted inline SVG — no external dependency, works in prod & dev.
+const FALLBACK_IMAGE =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E";
+
 export default function StaffPosPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [lastOrder, setLastOrder] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
   const supabase = createClient();
   const cart = useCartStore();
 
   const fetchProducts = async () => {
     const { data } = await supabase
       .from("products")
-      .select("*")
+      .select("*, product_images(public_url, is_primary, sort_order)")
       .eq("status", "in_stock")
       .eq("approval_status", "approved")
       .order("created_at", { ascending: false });
@@ -24,8 +29,17 @@ export default function StaffPosPage() {
   };
 
   useEffect(() => {
+    setMounted(true);
     fetchProducts();
   }, []);
+
+  if (!mounted) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-mid animate-pulse">Khởi tạo POS...</div>
+      </div>
+    );
+  }
 
   const handleCheckout = async () => {
     if (cart.items.length === 0) return;
@@ -114,6 +128,10 @@ export default function StaffPosPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[1px] bg-rule border border-rule">
             {products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase())).map((p) => {
               const inCart = cart.items.some((i) => i.product_id === p.id);
+              const images = p.product_images || [];
+              const primaryImage = images.find((img: any) => img.is_primary) || images[0];
+              const imageUrl = (primaryImage && primaryImage.public_url) ? primaryImage.public_url : FALLBACK_IMAGE;
+
               return (
                 <button
                   key={p.id}
@@ -128,16 +146,32 @@ export default function StaffPosPage() {
                       quantity: 1,
                     })
                   }
-                  className={`bg-paper p-3 flex flex-col justify-between aspect-[3/4] text-left transition-opacity ${
+                  className={`bg-paper flex flex-col text-left transition-opacity aspect-[3/4] ${
                     inCart ? "opacity-40" : "hover:bg-surface"
                   }`}
                 >
-                  <div>
-                    <div className="font-display text-lg tracking-wider">{p.sku}</div>
-                    <div className="text-xs text-mid line-clamp-2 mt-1">{p.name}</div>
+                  {/* Image Section */}
+                  <div className="aspect-square w-full bg-surface border-b border-rule relative overflow-hidden">
+                    <img
+                      src={imageUrl}
+                      alt={p.name}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).src = FALLBACK_IMAGE; }}
+                    />
                   </div>
-                  <div className="font-mono text-sm">{p.base_price.toLocaleString()}đ</div>
-                  {inCart && <span className="text-xs text-mid mt-1 uppercase font-medium">Đã chọn</span>}
+
+                  {/* Info Section */}
+                  <div className="p-2 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="font-display text-sm tracking-wider truncate">{p.sku}</div>
+                      <div className="text-[10px] text-mid line-clamp-1 mt-0.5">{p.name}</div>
+                    </div>
+                    <div className="flex justify-between items-end mt-1">
+                      <span className="font-mono text-xs font-semibold">{p.base_price.toLocaleString()}đ</span>
+                      {inCart && <span className="text-[10px] text-mid uppercase font-medium">Đã chọn</span>}
+                    </div>
+                  </div>
                 </button>
               );
             })}

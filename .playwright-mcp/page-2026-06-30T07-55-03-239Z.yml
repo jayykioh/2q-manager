@@ -1,0 +1,28 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - banner [ref=f2e3]:
+      - link "2Q POS" [ref=f2e4] [cursor=pointer]:
+        - /url: /pos
+        - heading "2Q POS" [level=1] [ref=f2e5]
+    - main [ref=f2e6]:
+      - generic [ref=f2e7]: Loading...
+    - navigation [ref=f2e8]:
+      - link "POS" [ref=f2e9] [cursor=pointer]:
+        - /url: /pos
+        - img [ref=f2e10]
+        - generic [ref=f2e13]: POS
+      - link "Đơn hàng" [ref=f2e14] [cursor=pointer]:
+        - /url: /orders
+        - img [ref=f2e15]
+        - generic [ref=f2e18]: Đơn hàng
+      - link "Ca làm" [ref=f2e19] [cursor=pointer]:
+        - /url: /attendance
+        - img [ref=f2e20]
+        - generic [ref=f2e23]: Ca làm
+      - link "Cá nhân" [ref=f2e24] [cursor=pointer]:
+        - /url: /profile
+        - img [ref=f2e26]
+        - generic [ref=f2e29]: Cá nhân
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=f2e35] [cursor=pointer]:
+    - img [ref=f2e36]

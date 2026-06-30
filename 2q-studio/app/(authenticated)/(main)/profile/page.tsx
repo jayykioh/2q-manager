@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { BackButton } from "@/components/BackButton";
+import { ThemeSelector } from "@/components/ThemeSelector";
 
 export default function StaffProfilePage() {
   const [profile, setProfile] = useState<any>(null);
@@ -102,7 +104,10 @@ export default function StaffProfilePage() {
 
   return (
     <div className="p-4">
-      <h2 className="font-sans text-xl font-medium mb-8">Thông tin Cá nhân</h2>
+      <div className="flex items-center gap-2 mb-8">
+        <BackButton />
+        <h2 className="font-sans text-xl font-medium">Thông tin Cá nhân</h2>
+      </div>
       
       <div className="bg-paper border border-rule p-4 mb-6">
         <div className="font-display text-2xl mb-1">{profile.full_name}</div>
@@ -130,6 +135,8 @@ export default function StaffProfilePage() {
           </div>
         </div>
       )}
+
+      <ThemeSelector />
 
       <div className="bg-paper border border-rule p-4">
         <h3 className="font-medium mb-4">Đổi mật khẩu</h3>

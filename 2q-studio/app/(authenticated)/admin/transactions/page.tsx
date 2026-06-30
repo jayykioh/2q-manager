@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { BackButton } from "@/components/BackButton";
 
 export default function AdminTransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -52,7 +53,10 @@ export default function AdminTransactionsPage() {
   return (
     <div className="p-4 flex gap-8">
       <div className="flex-1">
-        <h2 className="font-sans text-xl font-medium mb-4">Lịch sử Thu Chi</h2>
+        <div className="flex items-center gap-2 mb-4">
+          <BackButton />
+          <h2 className="font-sans text-xl font-medium">Lịch sử Thu Chi</h2>
+        </div>
         <div className="space-y-2">
           {transactions.map((t) => (
             <div key={t.id} className="bg-paper border border-rule p-3 flex justify-between items-center">

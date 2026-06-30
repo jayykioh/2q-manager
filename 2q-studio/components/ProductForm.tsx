@@ -6,6 +6,16 @@ import { Loader2, Upload, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
+// Guard: alert developers early if the R2 public URL env var is missing.
+// In production this env var MUST be set in Vercel → Project → Environment Variables.
+if (typeof window !== "undefined" && !process.env.NEXT_PUBLIC_R2_PUBLIC_URL) {
+  console.error(
+    "[2Q] NEXT_PUBLIC_R2_PUBLIC_URL is not set. " +
+    "Images uploaded in this session will have a null public_url in the database. " +
+    "Add it to Vercel Environment Variables and redeploy."
+  );
+}
+
 interface ProductFormProps {
   onSuccess?: () => void;
   defaultStoreId: string;
@@ -159,7 +169,13 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
         <div className="flex flex-wrap gap-2 mb-2">
           {images.map((img, i) => (
             <div key={i} className="relative w-20 h-20 border border-rule bg-surface">
-              <img src={URL.createObjectURL(img)} alt="" className="object-cover w-full h-full" />
+              <img
+                src={URL.createObjectURL(img)}
+                alt=""
+                loading="lazy"
+                className="object-cover w-full h-full"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
               <button type="button" onClick={() => removeImage(i)} className="absolute -top-2 -right-2 bg-destructive text-paper  p-1">
                 <X size={12} />
               </button>

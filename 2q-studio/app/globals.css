@@ -17,7 +17,8 @@
   --font-mono: var(--font-jetbrains-mono);
 }
 
-:root {
+:root,
+:root[data-theme="light"] {
   /* Default mode (Paper) */
   --ink: #0A0A0A;
   --paper: #FAFAFA;
@@ -32,7 +33,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     /* Dark mode (Ink/Paper inverted) */
     --ink: #FAFAFA;
     --paper: #0A0A0A;
@@ -45,6 +46,19 @@
     --destructive: #D62828;
     --success: #1A7A4A;
   }
+}
+
+:root[data-theme="dark"] {
+  --ink: #FAFAFA;
+  --paper: #0A0A0A;
+  --mid: #A3A3A3;
+  --rule: #333333;
+  --surface: #171717;
+  --inverse-bg: #FAFAFA;
+  --inverse-fg: #0A0A0A;
+  --accent: #FAFAFA;
+  --destructive: #F05252;
+  --success: #45A66F;
 }
 
 body {
