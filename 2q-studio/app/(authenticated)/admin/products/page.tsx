@@ -13,6 +13,7 @@ const FALLBACK_IMAGE =
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
+  const [filterTier, setFilterTier] = useState<string>("all");
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deleteModalProductId, setDeleteModalProductId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -127,16 +128,28 @@ export default function AdminProductsPage() {
     }
   };
 
+  const filteredProducts = products.filter(p => filterTier === "all" || p.tier === filterTier);
+
   return (
-    <div className="p-4 flex flex-col-reverse lg:flex-row gap-8 pb-24">
-      {/* Product List */}
-      <div className="flex-1">
-        <div className="flex items-center gap-2 mb-4">
-          <BackButton />
-          <h2 className="font-sans text-xl font-medium">Danh sách Sản phẩm</h2>
+    <div className="p-4 flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto items-start pb-20">
+      
+      {/* Product List Section */}
+      <div className="flex-1 w-full">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
+          <div className="flex items-center gap-2">
+            <BackButton />
+            <h2 className="font-sans text-2xl font-bold uppercase tracking-wide">Kho hàng</h2>
+          </div>
+          <div className="flex gap-2 flex-wrap text-sm font-medium">
+             <button onClick={() => setFilterTier("all")} className={`px-3 py-1 border transition-colors ${filterTier === "all" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Tất cả</button>
+             <button onClick={() => setFilterTier("standard")} className={`px-3 py-1 border transition-colors ${filterTier === "standard" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Thường</button>
+             <button onClick={() => setFilterTier("premium")} className={`px-3 py-1 border transition-colors ${filterTier === "premium" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Xịn</button>
+             <button onClick={() => setFilterTier("done")} className={`px-3 py-1 border transition-colors ${filterTier === "done" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Hoàn thành</button>
+          </div>
         </div>
+
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-          {products.map((p) => {
+          {filteredProducts.map((p) => {
             // Get the primary image, or the first image, or fallback
             const images = p.product_images || [];
             const primaryImage = images.find((img: any) => img.is_primary) || images[0];
@@ -258,12 +271,11 @@ export default function AdminProductsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Tier</label>
+                  <label className="block text-sm font-medium mb-1">Hạng</label>
                   <select name="tier" defaultValue={editingProduct.tier} className="w-full border border-rule p-2 bg-paper">
-                    <option value="standard">Standard</option>
-                    <option value="premium">Premium</option>
-                    <option value="luxury">Luxury</option>
-                    <option value="custom">Custom</option>
+                    <option value="standard">Thường (#)</option>
+                    <option value="premium">Xịn ($)</option>
+                    <option value="done">Hoàn thành (&)</option>
                   </select>
                 </div>
               </div>

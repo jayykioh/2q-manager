@@ -1,0 +1,1 @@
+ALTER TYPE public.product_tier ADD VALUE IF NOT EXISTS 'done';

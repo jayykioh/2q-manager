@@ -39,10 +39,9 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${bebasNeue.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <Script
+      <head>
+        <script
           id="theme-init"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -66,11 +65,8 @@ export default function RootLayout({
             `,
           }}
         />
-        {children}
-        <Toaster position="top-right" richColors />
-        <Script
+        <script
           id="register-sw"
-          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
@@ -85,6 +81,10 @@ export default function RootLayout({
             `,
           }}
         />
+      </head>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );
