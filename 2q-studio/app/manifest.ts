@@ -3,7 +3,7 @@ import { MetadataRoute } from 'next'
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: '2Q Manager',
-    short_name: '2Q',
+    short_name: '2Q Manager',
     description: 'Internal POS and Management System',
     start_url: '/login',
     display: 'standalone',
