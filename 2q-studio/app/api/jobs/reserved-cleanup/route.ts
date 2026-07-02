@@ -4,17 +4,18 @@ import { createClient } from '@supabase/supabase-js';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const cronSecret = process.env.CRON_SECRET;
+  const authHeader = request.headers.get('authorization');
+  
+  // Basic security check: expect `Bearer <CRON_SECRET>`
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
     process.env.SUPABASE_SERVICE_ROLE_KEY || ''
   );
-
-  const authHeader = request.headers.get('authorization');
-  
-  // Basic security check: expect `Bearer <CRON_SECRET>`
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
 
   try {
     // Note: Since we are running on service_role key, we bypass RLS.
@@ -68,8 +69,8 @@ export async function GET(request: Request) {
       processed: expiredProducts.length 
     });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Cron job error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

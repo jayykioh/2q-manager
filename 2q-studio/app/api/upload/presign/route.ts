@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { randomUUID } from "crypto";
 import { s3Client } from "@/lib/s3-client";
 import { createClient } from "@/lib/supabase/server";
+
+const ALLOWED_CONTENT_TYPES = new Set([
+  "image/avif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const ALLOWED_FOLDERS = new Set(["products"]);
+const MAX_FILENAME_LENGTH = 120;
 
 // NOTE: This is a simple in-memory rate limiter for MVP purposes.
 // On Vercel Serverless, each cold start creates a new process instance,
@@ -40,8 +50,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check Rate Limit (IP based or User ID based)
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    // Check Rate Limit (User ID based)
     if (!checkRateLimit(user.id)) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
@@ -49,13 +58,29 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { filename, contentType, folder = "products" } = body;
 
-    if (!filename || !contentType) {
+    if (typeof filename !== "string" || typeof contentType !== "string") {
       return NextResponse.json({ error: "Missing filename or contentType" }, { status: 400 });
     }
 
+    if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
+      return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
+    }
+
+    if (typeof folder !== "string" || !ALLOWED_FOLDERS.has(folder)) {
+      return NextResponse.json({ error: "Unsupported upload folder" }, { status: 400 });
+    }
+
     // Sanitize filename and create safe key
-    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(7)}-${sanitizedFilename}`;
+    const sanitizedFilename = filename
+      .replace(/[^a-zA-Z0-9.-]/g, "_")
+      .replace(/^\.+/, "")
+      .slice(0, MAX_FILENAME_LENGTH);
+
+    if (!sanitizedFilename) {
+      return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
+    }
+
+    const uniqueFilename = `${Date.now()}-${randomUUID()}-${sanitizedFilename}`;
     const objectKey = `${folder}/${uniqueFilename}`;
 
     const command = new PutObjectCommand({
@@ -70,7 +95,7 @@ export async function POST(req: Request) {
       url: signedUrl,
       key: objectKey,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Presign error:", error);
     return NextResponse.json({ error: "Failed to generate presigned URL" }, { status: 500 });
   }

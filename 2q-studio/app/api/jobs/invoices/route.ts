@@ -4,15 +4,16 @@ import { createClient } from '@supabase/supabase-js';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const cronSecret = process.env.CRON_SECRET;
+  const authHeader = request.headers.get('authorization');
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
     process.env.SUPABASE_SERVICE_ROLE_KEY || ''
   );
-
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
 
   try {
     // 1. Fetch pending invoice jobs
@@ -48,17 +49,18 @@ export async function GET(request: Request) {
           .eq('id', job.id);
 
         processedCount++;
-      } catch (jobError: any) {
+      } catch (jobError: unknown) {
         // Retry logic
         const nextAttempts = job.attempts + 1;
         const newStatus = nextAttempts >= 3 ? 'failed' : 'pending';
+        const errorMessage = jobError instanceof Error ? jobError.message : 'Unknown error';
         
         await supabase
           .from('invoice_jobs')
           .update({
             attempts: nextAttempts,
             status: newStatus,
-            error_message: jobError.message
+            error_message: errorMessage
           })
           .eq('id', job.id);
       }
@@ -69,7 +71,8 @@ export async function GET(request: Request) {
       processed: processedCount 
     });
 
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    console.error('Invoice cron job error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
