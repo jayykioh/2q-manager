@@ -14,6 +14,7 @@ export default function StaffPosPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [lastOrder, setLastOrder] = useState<any>(null);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [mounted, setMounted] = useState(false);
   const supabase = createClient();
   const cart = useCartStore();
@@ -52,7 +53,7 @@ export default function StaffPosPage() {
       p_store_id: "11111111-1111-1111-1111-111111111111", 
       p_items: orderItems.map((i) => ({ product_id: i.product_id, sale_price: i.sale_price, quantity: 1 })),
       p_discount: 0,
-      p_payment_method: "cash",
+      p_payment_method: paymentMethod,
       p_customer_name: "Khách lẻ",
       p_customer_phone: null,
       p_idempotency_key: idempotencyKey,
@@ -67,7 +68,8 @@ export default function StaffPosPage() {
         id: data,
         items: orderItems,
         total: orderTotal,
-        date: new Date().toLocaleString()
+        date: new Date().toLocaleString(),
+        paymentMethod: paymentMethod
       });
       
       cart.clearCart();
@@ -104,6 +106,14 @@ export default function StaffPosPage() {
             <div className="border-t border-black pt-2 flex justify-between font-bold text-sm">
               <span>TỔNG</span>
               <span>{lastOrder.total.toLocaleString()}</span>
+            </div>
+            <div className="mt-1 text-left text-[10px]">
+              PTTT: {
+                lastOrder.paymentMethod === 'cash' ? 'Tiền mặt' : 
+                lastOrder.paymentMethod === 'transfer' ? 'Chuyển khoản' : 
+                lastOrder.paymentMethod === 'card' ? 'Quẹt thẻ' : 
+                lastOrder.paymentMethod
+              }
             </div>
             <div className="text-center mt-4 text-[10px]">Cảm ơn quý khách!</div>
           </>
@@ -203,6 +213,30 @@ export default function StaffPosPage() {
             )}
           </div>
           <div className="mt-4 pt-4 border-t border-rule">
+            <div className="mb-4">
+              <div className="text-sm font-medium mb-2">Phương thức thanh toán</div>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setPaymentMethod("cash")}
+                  className={`py-2 text-sm border ${paymentMethod === "cash" ? "bg-ink text-paper border-ink" : "bg-paper text-ink hover:bg-surface border-rule"} rounded-sm transition-colors`}
+                >
+                  Tiền mặt
+                </button>
+                <button
+                  onClick={() => setPaymentMethod("transfer")}
+                  className={`py-2 text-sm border ${paymentMethod === "transfer" ? "bg-ink text-paper border-ink" : "bg-paper text-ink hover:bg-surface border-rule"} rounded-sm transition-colors`}
+                >
+                  CK
+                </button>
+                <button
+                  onClick={() => setPaymentMethod("card")}
+                  className={`py-2 text-sm border ${paymentMethod === "card" ? "bg-ink text-paper border-ink" : "bg-paper text-ink hover:bg-surface border-rule"} rounded-sm transition-colors`}
+                >
+                  Quẹt thẻ
+                </button>
+              </div>
+            </div>
+
             <div className="flex justify-between font-mono text-lg mb-4">
               <span>Tổng:</span>
               <span>{cart.getTotal().toLocaleString()}đ</span>

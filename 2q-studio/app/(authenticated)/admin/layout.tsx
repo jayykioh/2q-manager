@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import Link from "next/link";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
@@ -9,7 +10,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <Link href="/admin">
           <h1 className="font-display text-2xl tracking-wide">2Q ADMIN</h1>
         </Link>
-        <div className="text-sm font-sans">Admin User</div>
+        <div className="flex items-center gap-4">
+          <NotificationBell />
+          <div className="text-sm font-sans">Admin User</div>
+        </div>
       </header>
       <main className="flex-1">{children}</main>
       <BottomNav />

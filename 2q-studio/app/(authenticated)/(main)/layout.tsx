@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import Link from "next/link";
 import { HeaderTime } from "@/components/HeaderTime";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export default function StaffLayout({ children }: { children: ReactNode }) {
   return (
@@ -10,7 +11,10 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
         <Link href="/pos">
           <h1 className="font-display text-2xl tracking-wide">2Q POS</h1>
         </Link>
-        <HeaderTime />
+        <div className="flex items-center gap-4">
+          <NotificationBell />
+          <HeaderTime />
+        </div>
       </header>
       <main className="flex-1">{children}</main>
       <BottomNav />
