@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
 import { useCartStore } from "@/stores/useCartStore";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -162,12 +163,17 @@ export default function StaffPosPage() {
                 >
                   {/* Image Section */}
                   <div className="aspect-square w-full bg-surface border-b border-rule relative overflow-hidden">
-                    <img
+                    <Image
                       src={imageUrl}
                       alt={p.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                      className="object-cover"
                       loading="lazy"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).src = FALLBACK_IMAGE; }}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).srcset = "";
+                        (e.currentTarget as HTMLImageElement).src = FALLBACK_IMAGE;
+                      }}
                     />
                   </div>
 

@@ -65,8 +65,9 @@ export default function RootLayout({
             `,
           }}
         />
-        <script
+        <Script
           id="register-sw"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {

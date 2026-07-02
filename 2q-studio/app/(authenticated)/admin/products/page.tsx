@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { ProductForm } from "@/components/ProductForm";
+import Image from "next/image";
+import dynamic from "next/dynamic";
 import { BackButton } from "@/components/BackButton";
+
+const ProductForm = dynamic(() => import("@/components/ProductForm").then((mod) => mod.ProductForm), {
+  loading: () => <div className="p-8 border border-rule bg-surface animate-pulse h-[400px]"></div>,
+  ssr: false,
+});
 import { Check, X, Edit2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,7 +44,7 @@ export default function AdminProductsPage() {
       toast.error("Lỗi duyệt sản phẩm: " + error.message);
     } else {
       toast.success(status === "approved" ? "Đã duyệt sản phẩm" : "Đã từ chối sản phẩm");
-      fetchProducts();
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, approval_status: status } : p));
     }
   };
 
@@ -49,13 +55,13 @@ export default function AdminProductsPage() {
   const executeDelete = async () => {
     if (!deleteModalProductId) return;
     
-    // Hard delete directly from the database
-    const { error } = await supabase.from("products").delete().eq("id", deleteModalProductId);
+    // Soft delete (Best practice to prevent foreign key issues with orders)
+    const { error } = await supabase.from("products").update({ status: 'archived' }).eq("id", deleteModalProductId);
     if (error) {
       toast.error("Lỗi xóa sản phẩm: " + error.message);
     } else {
-      toast.success("Sản phẩm đã được xóa hoàn toàn!");
-      fetchProducts();
+      toast.success("Sản phẩm đã được xóa!");
+      setProducts(prev => prev.filter(p => p.id !== deleteModalProductId));
     }
     setDeleteModalProductId(null);
   };
@@ -119,7 +125,9 @@ export default function AdminProductsPage() {
       if (error) throw error;
 
       toast.success("Đã cập nhật sản phẩm!");
+      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, name, type, tier, base_price } : p));
       setEditingProduct(null);
+      // Fetch in background to update images if needed
       fetchProducts();
     } catch (err: any) {
       toast.error("Lỗi khi lưu: " + err.message);
@@ -159,12 +167,17 @@ export default function AdminProductsPage() {
               <div key={p.id} className="bg-paper border border-rule flex flex-col group relative">
                 {/* Image Section */}
                 <div className="aspect-square w-full bg-surface border-b border-rule relative overflow-hidden">
-                  <img
+                  <Image
                     src={imageUrl}
                     alt={p.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                    className="object-cover"
                     loading="lazy"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = FALLBACK_IMAGE; }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).srcset = "";
+                      (e.currentTarget as HTMLImageElement).src = FALLBACK_IMAGE;
+                    }}
                   />
                   
                   {/* Status Badges */}
