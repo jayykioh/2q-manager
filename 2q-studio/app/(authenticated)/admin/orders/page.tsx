@@ -5,9 +5,26 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { BackButton } from "@/components/BackButton";
 
+interface AdminOrderItem {
+  id: string;
+  sale_price: number;
+  products: { name: string; sku: string } | null;
+}
+
+interface AdminOrder {
+  id: string;
+  order_number: string;
+  status: string;
+  created_at: string;
+  created_by: string;
+  cancel_reason: string | null;
+  total: number;
+  order_items: AdminOrderItem[];
+}
+
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const supabase = createClient();
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [supabase] = useState(createClient);
 
   const fetchOrders = async () => {
     const { data } = await supabase
@@ -15,12 +32,18 @@ export default function AdminOrdersPage() {
       .select("*, order_items(*, products(name, sku))")
       .order("created_at", { ascending: false });
     
-    setOrders(data || []);
+    setOrders((data || []) as AdminOrder[]);
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    let active = true;
+    void supabase
+      .from("orders")
+      .select("*, order_items(*, products(name, sku))")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => { if (active) setOrders((data || []) as AdminOrder[]); });
+    return () => { active = false; };
+  }, [supabase]);
 
   const handleCancel = async (orderId: string) => {
     const reason = prompt("Lý do hủy đơn hàng?");
@@ -74,7 +97,7 @@ export default function AdminOrdersPage() {
               </div>
             )}
             <div className="space-y-1 mb-2">
-              {o.order_items?.map((i: any) => (
+              {o.order_items?.map((i) => (
                 <div key={i.id} className="flex justify-between text-sm">
                   <span>{i.products?.name} ({i.products?.sku})</span>
                   <span className="font-mono">{i.sale_price.toLocaleString()}đ</span>

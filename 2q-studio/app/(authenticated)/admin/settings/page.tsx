@@ -4,15 +4,21 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { BackButton } from "@/components/BackButton";
+import { unsubscribeCurrentDevice } from "@/lib/push-notifications";
+
+interface Profile {
+  full_name: string;
+  role: string;
+}
 
 export default function AdminSettingsPage() {
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<{type: 'success'|'error', text: string} | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
   
-  const supabase = createClient();
+  const [supabase] = useState(createClient);
   const router = useRouter();
 
   useEffect(() => {
@@ -54,8 +60,14 @@ export default function AdminSettingsPage() {
 
   const handleLogout = async () => {
     setLogoutLoading(true);
-    await supabase.auth.signOut();
-    router.push("/login");
+    try {
+      await unsubscribeCurrentDevice();
+    } catch (error) {
+      console.error("Failed to remove push subscription during logout", error);
+    } finally {
+      await supabase.auth.signOut();
+      router.push("/login");
+    }
   };
 
   if (!profile) return <div className="p-4 text-mid">Loading...</div>;

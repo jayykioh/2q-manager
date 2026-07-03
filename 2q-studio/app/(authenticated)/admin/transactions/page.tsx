@@ -5,8 +5,20 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { BackButton } from "@/components/BackButton";
 
+interface Transaction {
+  id: string;
+  type: "income" | "expense";
+  category: string;
+  amount: number;
+  description: string | null;
+  status: string;
+  cancel_reason: string | null;
+  business_date: string;
+  created_at: string;
+}
+
 export default function AdminTransactionsPage() {
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [amountInput, setAmountInput] = useState<string>("");
   
   // Filters and Pagination
@@ -19,7 +31,7 @@ export default function AdminTransactionsPage() {
   const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   
-  const supabase = createClient();
+  const [supabase] = useState(createClient);
 
   const fetchTransactions = async () => {
     const { data } = await supabase
@@ -27,12 +39,18 @@ export default function AdminTransactionsPage() {
       .select("*")
       .order("created_at", { ascending: false });
     
-    setTransactions(data || []);
+    setTransactions((data || []) as Transaction[]);
   };
 
   useEffect(() => {
-    fetchTransactions();
-  }, []);
+    let active = true;
+    void supabase
+      .from("transactions")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => { if (active) setTransactions((data || []) as Transaction[]); });
+    return () => { active = false; };
+  }, [supabase]);
 
   const handleAddExpense = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

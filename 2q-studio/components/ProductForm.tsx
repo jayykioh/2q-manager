@@ -42,9 +42,9 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
             fileType: "image/webp",
           });
           validFiles.push(compressed);
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error("Lỗi nén ảnh:", err);
-          toast.error(`Không thể nén ảnh ${file.name}, đang dùng ảnh gốc. Lỗi: ${err.message || ""}`);
+          toast.error(`Không thể nén ảnh ${file.name}, đang dùng ảnh gốc. Lỗi: ${err instanceof Error ? err.message : ""}`);
           validFiles.push(file);
         }
       }
@@ -153,8 +153,8 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
       setImages([]);
       form.reset();
       onSuccess?.();
-    } catch (err: any) {
-      toast.error("Lỗi: " + err.message);
+    } catch (err: unknown) {
+      toast.error("Lỗi: " + (err instanceof Error ? err.message : "Không xác định"));
     } finally {
       setLoading(false);
     }

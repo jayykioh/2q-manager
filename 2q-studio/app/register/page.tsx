@@ -4,6 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+interface SavedUser {
+  username: string;
+  role: "staff" | "admin";
+}
+
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
@@ -12,7 +17,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(createClient);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +27,7 @@ export default function RegisterPage() {
     // Use standard Supabase signUp
     // Our DB triggers will automatically set email_confirmed_at and create the public.profile
     const pseudoEmail = `${username}@2q.local`;
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    const { error: signUpError } = await supabase.auth.signUp({
       email: pseudoEmail,
       password: password,
       options: {
@@ -59,9 +64,9 @@ export default function RegisterPage() {
     if (authData.user) {
       // Save to localStorage
       const stored = localStorage.getItem("saved_users");
-      const savedUsers = stored ? JSON.parse(stored) : [];
+      const savedUsers: SavedUser[] = stored ? JSON.parse(stored) as SavedUser[] : [];
       
-      const existingIdx = savedUsers.findIndex((u: any) => u.username === username);
+      const existingIdx = savedUsers.findIndex((user) => user.username === username);
       if (existingIdx === -1) {
         savedUsers.push({ username, role: 'staff' });
       } else {

@@ -20,17 +20,23 @@ export default function AdminTeamPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  const supabase = createClient();
-
-  useEffect(() => {
-    fetchProfiles();
-  }, []);
+  const [supabase] = useState(createClient);
 
   const fetchProfiles = async () => {
     const { data } = await supabase.from("profiles").select("*").order("role").order("full_name");
     if (data) setProfiles(data);
     setLoading(false);
   };
+
+  useEffect(() => {
+    let active = true;
+    void supabase.from("profiles").select("*").order("role").order("full_name").then(({ data }) => {
+      if (!active) return;
+      if (data) setProfiles(data as Profile[]);
+      setLoading(false);
+    });
+    return () => { active = false; };
+  }, [supabase]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();

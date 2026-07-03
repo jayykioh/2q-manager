@@ -5,9 +5,15 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { BackButton } from "@/components/BackButton";
 import { ThemeSelector } from "@/components/ThemeSelector";
+import { subscribeCurrentDevice, unsubscribeCurrentDevice } from "@/lib/push-notifications";
+
+interface Profile {
+  full_name: string;
+  role: "admin" | "staff";
+}
 
 export default function StaffProfilePage() {
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [metrics, setMetrics] = useState({
     personalRevenue: 0,
     totalIncome: 0,
@@ -18,7 +24,7 @@ export default function StaffProfilePage() {
   const [passwordMessage, setPasswordMessage] = useState<{type: 'success'|'error', text: string} | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
   
-  const supabase = createClient();
+  const [supabase] = useState(createClient);
   const router = useRouter();
 
   useEffect(() => {
@@ -32,7 +38,8 @@ export default function StaffProfilePage() {
         .eq("id", user.id)
         .single();
       
-      setProfile(profData);
+      if (!profData) return;
+      setProfile(profData as Profile);
 
       // Get today's metrics
       const businessDate = new Date().toISOString().split("T")[0]; // MVP client date approximation
@@ -73,8 +80,8 @@ export default function StaffProfilePage() {
       });
     };
 
-    fetchProfile();
-  }, []);
+    void fetchProfile();
+  }, [supabase]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,8 +105,14 @@ export default function StaffProfilePage() {
 
   const handleLogout = async () => {
     setLogoutLoading(true);
-    await supabase.auth.signOut();
-    router.push("/login");
+    try {
+      await unsubscribeCurrentDevice();
+    } catch (error) {
+      console.error("Failed to remove push subscription during logout", error);
+    } finally {
+      await supabase.auth.signOut();
+      router.push("/login");
+    }
   };
 
   if (!profile) return <div className="p-4 text-mid">Loading...</div>;
@@ -151,6 +164,12 @@ export default function StaffProfilePage() {
             }
             const perm = await Notification.requestPermission();
             if (perm === "granted") {
+              try {
+                await subscribeCurrentDevice();
+              } catch (error: unknown) {
+                alert(error instanceof Error ? error.message : "Không thể bật thông báo.");
+                return;
+              }
               alert("Đã cấp quyền nhận thông báo!");
             } else {
               alert("Bạn đã từ chối nhận thông báo.");

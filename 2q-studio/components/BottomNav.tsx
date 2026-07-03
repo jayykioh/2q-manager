@@ -16,9 +16,9 @@ const NAV_ITEMS = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const [isOffline, setIsOffline] = useState(false);
+  const [isOffline, setIsOffline] = useState(() => typeof navigator !== "undefined" && !navigator.onLine);
   const [isAdmin, setIsAdmin] = useState(false);
-  const supabase = createClient();
+  const [supabase] = useState(createClient);
 
   useEffect(() => {
     function handleOnline() {
@@ -30,9 +30,6 @@ export function BottomNav() {
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
-
-    // Initial check
-    setIsOffline(!navigator.onLine);
 
     return () => {
       window.removeEventListener("online", handleOnline);

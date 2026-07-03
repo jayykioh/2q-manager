@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import { useCartStore } from "@/stores/useCartStore";
@@ -12,19 +12,54 @@ import { toast } from "sonner";
 const FALLBACK_IMAGE =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E";
 
+interface ProductImage {
+  public_url: string | null;
+  is_primary: boolean;
+  sort_order: number;
+}
+
+interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  tier: string;
+  base_price: number;
+  product_images: ProductImage[];
+}
+
+interface CartItem {
+  product_id: string;
+  sku: string;
+  name: string;
+  base_price: number;
+  sale_price: number;
+  quantity: number;
+}
+
+interface LastOrder {
+  id: string;
+  items: CartItem[];
+  total: number;
+  date: string;
+  paymentMethod: string;
+  notes: string;
+}
+
+const subscribeToHydration = () => () => undefined;
+
 export default function StaffPosPage() {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTier, setFilterTier] = useState("all");
-  const [lastOrder, setLastOrder] = useState<any>(null);
+  const [lastOrder, setLastOrder] = useState<LastOrder | null>(null);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [orderNotes, setOrderNotes] = useState("");
-  const [mounted, setMounted] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(6);
 
-  const supabase = createClient();
+  const [supabase] = useState(createClient);
   const cart = useCartStore();
   const router = useRouter();
+  const mounted = useSyncExternalStore(subscribeToHydration, () => true, () => false);
 
   const fetchProducts = async () => {
     const { data } = await supabase
@@ -33,13 +68,20 @@ export default function StaffPosPage() {
       .eq("status", "in_stock")
       .eq("approval_status", "approved")
       .order("created_at", { ascending: false });
-    setProducts(data || []);
+    setProducts((data || []) as Product[]);
   };
 
   useEffect(() => {
-    setMounted(true);
-    fetchProducts();
-  }, []);
+    let active = true;
+    void supabase
+      .from("products")
+      .select("*, product_images(public_url, is_primary, sort_order)")
+      .eq("status", "in_stock")
+      .eq("approval_status", "approved")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => { if (active) setProducts((data || []) as Product[]); });
+    return () => { active = false; };
+  }, [supabase]);
 
   if (!mounted) {
     return (
@@ -73,7 +115,7 @@ export default function StaffPosPage() {
       toast.success("Thanh toán thành công!");
       // Save snapshot for print
       setLastOrder({
-        id: data,
+        id: data as string,
         items: orderItems,
         total: orderTotal,
         date: new Date().toLocaleString(),
@@ -123,7 +165,7 @@ export default function StaffPosPage() {
             }).slice(0, displayLimit).map((p) => {
               const inCart = cart.items.some((i) => i.product_id === p.id);
               const images = p.product_images || [];
-              const primaryImage = images.find((img: any) => img.is_primary) || images[0];
+              const primaryImage = images.find((img) => img.is_primary) || images[0];
               const imageUrl = (primaryImage && primaryImage.public_url) ? primaryImage.public_url : FALLBACK_IMAGE;
 
               return (

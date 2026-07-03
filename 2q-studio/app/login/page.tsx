@@ -25,18 +25,17 @@ export default function LoginPage() {
   const [fetchingUsers, setFetchingUsers] = useState(true);
   
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(createClient);
 
   useEffect(() => {
     const isManual = new URLSearchParams(window.location.search).get("manual") === "1";
     
-    if (isManual) {
-      setMode("add_user");
-      setFetchingUsers(false);
-      return;
-    }
-
     const fetchUsers = async () => {
+      if (isManual) {
+        setMode("add_user");
+        setFetchingUsers(false);
+        return;
+      }
       const { data } = await supabase.from("profiles").select("id, username, full_name, role");
       
       if (data && data.length > 0) {
@@ -48,7 +47,7 @@ export default function LoginPage() {
       setFetchingUsers(false);
     };
 
-    fetchUsers();
+    void fetchUsers();
   }, [router, supabase]);
 
   const handleLogin = async (e: React.FormEvent) => {

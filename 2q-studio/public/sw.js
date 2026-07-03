@@ -1,101 +1,66 @@
-const CACHE_NAME = '2q-pos-cache-v1';
-const URLS_TO_CACHE = [
-  '/',
-  '/login',
-  '/manifest.webmanifest',
-  '/favicon.ico',
-];
+const CACHE_NAME = "2q-pos-cache-v2";
+const URLS_TO_CACHE = ["/", "/login", "/manifest.webmanifest", "/favicon.ico"];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(URLS_TO_CACHE);
-    })
-  );
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(URLS_TO_CACHE)));
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches.keys().then((cacheNames) => Promise.all(
+      cacheNames.filter((cacheName) => cacheName !== CACHE_NAME).map((cacheName) => caches.delete(cacheName))
+    ))
   );
   self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
-  // Only intercept GET requests
-  if (event.request.method !== 'GET') return;
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+  if (event.request.url.includes("/api/") || event.request.url.includes("supabase.co")) return;
 
-  // For API/Supabase requests, try network first, then fail
-  if (event.request.url.includes('/api/') || event.request.url.includes('supabase.co')) {
-    return;
-  }
-
-  // Network first, fallback to cache for HTML/assets
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request).then((response) => {
-        if (response) {
-          return response;
-        }
-        return new Response('Network error and no cache available', {
-          status: 503,
-          statusText: 'Service Unavailable'
-        });
+    fetch(event.request).catch(async () => {
+      const response = await caches.match(event.request);
+      return response || new Response("Network error and no cache available", {
+        status: 503,
+        statusText: "Service Unavailable",
       });
     })
   );
 });
 
-self.addEventListener('push', (event) => {
-  if (event.data) {
-    try {
-      const data = event.data.json();
-      const options = {
-        body: data.body || '',
-        icon: data.icon || '/favicon.ico',
-        data: data.data || {},
-        vibrate: [100, 50, 100],
-      };
-
-      event.waitUntil(
-        self.registration.showNotification(data.title || 'Thông báo mới', options)
-      );
-    } catch (e) {
-      // If not JSON, just show as text
-      event.waitUntil(
-        self.registration.showNotification('Thông báo mới', {
-          body: event.data.text(),
-          icon: '/favicon.ico'
-        })
-      );
-    }
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { body: event.data ? event.data.text() : "" };
   }
+
+  const data = payload.data || {};
+  event.waitUntil(self.registration.showNotification(payload.title || "Thông báo mới", {
+    body: payload.body || "",
+    icon: payload.icon || "/favicon.ico",
+    badge: "/favicon.ico",
+    tag: payload.tag || data.notification_id,
+    data,
+    vibrate: [100, 50, 100],
+  }));
 });
 
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  // Focus or open the app
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      if (clientList.length > 0) {
-        let client = clientList[0];
-        for (let i = 0; i < clientList.length; i++) {
-          if (clientList[i].focused) {
-            client = clientList[i];
-          }
-        }
-        return client.focus();
-      }
-      return clients.openWindow('/');
-    })
-  );
+  const destination = event.notification.data && event.notification.data.url
+    ? event.notification.data.url
+    : "/";
+
+  event.waitUntil((async () => {
+    const clientList = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of clientList) {
+      if ("navigate" in client) await client.navigate(destination);
+      return client.focus();
+    }
+    return self.clients.openWindow(destination);
+  })());
 });

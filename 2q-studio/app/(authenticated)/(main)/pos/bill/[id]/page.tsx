@@ -5,6 +5,13 @@ import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import dayjs from "dayjs";
 
+interface BillItem {
+  id: string;
+  quantity: number;
+  sale_price: number;
+  product: { name: string; type: string };
+}
+
 export default async function BillPage({ params }: { params: { id: string } }) {
   const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
@@ -94,7 +101,7 @@ export default async function BillPage({ params }: { params: { id: string } }) {
               </tr>
             </thead>
             <tbody>
-              {order.order_items.map((item: any) => (
+              {(order.order_items as BillItem[]).map((item) => (
                 <tr key={item.id} className="border-b border-gray-100 last:border-0">
                   <td className="py-2 pr-2">
                     {item.product.name}

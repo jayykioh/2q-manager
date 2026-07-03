@@ -17,10 +17,29 @@ import { toast } from "sonner";
 const FALLBACK_IMAGE =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E";
 
+interface ProductImage {
+  public_url: string | null;
+  is_primary: boolean;
+  sort_order: number;
+}
+
+interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  type: string;
+  tier: string;
+  status: string;
+  approval_status: string;
+  base_price: number;
+  note?: string | null;
+  product_images: ProductImage[];
+}
+
 export default function ProductsPage() {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [filterTier, setFilterTier] = useState<string>("all");
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteModalProductId, setDeleteModalProductId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userRole, setUserRole] = useState<string>("staff");
@@ -29,7 +48,7 @@ export default function ProductsPage() {
   // States for Image Preview Carousel
   const [previewImages, setPreviewImages] = useState<string[] | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number>(0);
-  const supabase = createClient();
+  const [supabase] = useState(createClient);
 
   const fetchProducts = async () => {
     const { data } = await supabase
@@ -37,20 +56,28 @@ export default function ProductsPage() {
       .select("*, product_images(public_url, is_primary, sort_order)")
       .neq("status", "archived")
       .order("created_at", { ascending: false });
-    setProducts(data || []);
+    setProducts((data || []) as Product[]);
   };
 
   useEffect(() => {
-    const fetchUserRole = async () => {
+    let active = true;
+    const loadPage = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-        if (data) setUserRole(data.role);
+        if (active && data) setUserRole(data.role);
       }
+
+      const { data: productRows } = await supabase
+        .from("products")
+        .select("*, product_images(public_url, is_primary, sort_order)")
+        .neq("status", "archived")
+        .order("created_at", { ascending: false });
+      if (active) setProducts((productRows || []) as Product[]);
     };
-    fetchUserRole();
-    fetchProducts();
-  }, []);
+    void loadPage();
+    return () => { active = false; };
+  }, [supabase]);
 
   const handleApprove = async (id: string, status: string) => {
     const { error } = await supabase.from("products").update({ approval_status: status }).eq("id", id);
@@ -144,20 +171,20 @@ export default function ProductsPage() {
       setEditingProduct(null);
       // Fetch in background to update images if needed
       fetchProducts();
-    } catch (err: any) {
-      toast.error("Lỗi khi lưu: " + err.message);
+    } catch (err: unknown) {
+      toast.error("Lỗi khi lưu: " + (err instanceof Error ? err.message : "Không xác định"));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const openPreview = (product: any) => {
+  const openPreview = (product: Product) => {
     const images = product.product_images || [];
     if (images.length === 0) return;
     
     // Sort by sort_order
-    const sorted = [...images].sort((a: any, b: any) => a.sort_order - b.sort_order);
-    const urls = sorted.map((img: any) => img.public_url).filter(Boolean);
+    const sorted = [...images].sort((a, b) => a.sort_order - b.sort_order);
+    const urls = sorted.map((img) => img.public_url).filter((url): url is string => Boolean(url));
     
     if (urls.length > 0) {
       setPreviewImages(urls);
@@ -203,7 +230,7 @@ export default function ProductsPage() {
           {filteredProducts.slice(0, displayLimit).map((p) => {
             // Get the primary image, or the first image, or fallback
             const images = p.product_images || [];
-            const primaryImage = images.find((img: any) => img.is_primary) || images[0];
+            const primaryImage = images.find((img) => img.is_primary) || images[0];
             const imageUrl = (primaryImage && primaryImage.public_url) ? primaryImage.public_url : FALLBACK_IMAGE;
 
             return (

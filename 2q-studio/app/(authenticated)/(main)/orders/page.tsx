@@ -4,26 +4,39 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { BackButton } from "@/components/BackButton";
 
+interface OrderItem {
+  id: string;
+  sale_price: number;
+  products: { name: string; sku: string } | null;
+}
+
+interface Order {
+  id: string;
+  order_number: string;
+  status: string;
+  created_at: string;
+  total: number;
+  order_items: OrderItem[];
+}
+
 export default function StaffOrdersPage() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const supabase = createClient();
-
-  const fetchOrders = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data } = await supabase
-      .from("orders")
-      .select("*, order_items(*, products(name, sku))")
-      .eq("created_by", user.id)
-      .order("created_at", { ascending: false });
-    
-    setOrders(data || []);
-  };
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [supabase] = useState(createClient);
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    let active = true;
+    void (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("orders")
+        .select("*, order_items(*, products(name, sku))")
+        .eq("created_by", user.id)
+        .order("created_at", { ascending: false });
+      if (active) setOrders((data || []) as Order[]);
+    })();
+    return () => { active = false; };
+  }, [supabase]);
 
   return (
     <div className="p-4">
@@ -45,7 +58,7 @@ export default function StaffOrdersPage() {
               Ngày: {new Date(o.created_at).toLocaleString()}
             </div>
             <div className="space-y-1 mb-2">
-              {o.order_items?.map((i: any) => (
+              {o.order_items?.map((i) => (
                 <div key={i.id} className="flex justify-between text-sm">
                   <span>{i.products?.name} ({i.products?.sku})</span>
                   <span className="font-mono">{i.sale_price.toLocaleString()}đ</span>
