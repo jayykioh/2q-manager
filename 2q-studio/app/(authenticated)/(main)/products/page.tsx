@@ -76,6 +76,7 @@ export default function ProductsPage() {
     const type = formData.get("type") as string;
     const tier = formData.get("tier") as string;
     const base_price = Number(formData.get("basePrice"));
+    const note = formData.get("note") as string;
     const newImage = formData.get("newImage") as File | null;
 
     try {
@@ -119,13 +120,13 @@ export default function ProductsPage() {
 
       // 2. Update product info
       const { error } = await supabase.from("products").update({
-        name, type, tier, base_price
+        name, type, tier, base_price, note: note || null
       }).eq("id", editingProduct.id);
 
       if (error) throw error;
 
       toast.success("Đã cập nhật sản phẩm!");
-      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, name, type, tier, base_price } : p));
+      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, name, type, tier, base_price, note: note || null } : p));
       setEditingProduct(null);
       // Fetch in background to update images if needed
       fetchProducts();
@@ -298,6 +299,11 @@ export default function ProductsPage() {
               <div>
                 <label className="block text-sm font-medium mb-1">Giá bán cơ bản (VNĐ)</label>
                 <input required type="number" name="basePrice" defaultValue={editingProduct.base_price} className="w-full border border-rule p-2" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Ghi chú</label>
+                <textarea name="note" defaultValue={editingProduct.note || ""} rows={2} placeholder="Nhập ghi chú (nếu có)" className="w-full border border-rule p-2 resize-none" />
               </div>
 
               <div className="pt-4 flex gap-3">

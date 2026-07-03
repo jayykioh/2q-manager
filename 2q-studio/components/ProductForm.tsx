@@ -59,6 +59,7 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
       const type = formData.get("type") as string;
       const tier = formData.get("tier") as string;
       const basePrice = Number(formData.get("basePrice"));
+      const note = formData.get("note") as string;
 
       // 1. Upload Images to R2
       const uploadedImages = [];
@@ -129,6 +130,7 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
         p_length_mm: null,
         p_weight_g: null,
         p_images: uploadedImages,
+        p_note: note || null,
       });
 
       if (error) throw error;
@@ -179,6 +181,11 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
             <option value="done">Hoàn thành (&)</option>
           </select>
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Ghi chú</label>
+        <textarea name="note" rows={2} placeholder="Nhập ghi chú cho sản phẩm (nếu có)" className="w-full border border-rule p-2 resize-none" />
       </div>
 
       <div>
