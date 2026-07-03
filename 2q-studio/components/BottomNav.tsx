@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingBag, FileText, Clock, User, Shield } from "lucide-react";
+import { ShoppingBag, FileText, Clock, User, Shield, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
   { name: "POS", path: "/pos", icon: ShoppingBag },
   { name: "Đơn hàng", path: "/orders", icon: FileText },
+  { name: "Sản phẩm", path: "/products", icon: Package },
   { name: "Ca làm", path: "/attendance", icon: Clock },
   { name: "Cá nhân", path: "/profile", icon: User },
 ];

@@ -107,6 +107,7 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
         if (type === "bracelet") prefix = "BR";
         if (type === "ring") prefix = "RG";
         if (type === "earring") prefix = "ER";
+        if (type === "keychain") prefix = "KC";
         
         let suffix = "";
         if (tier === "standard") suffix = "#";
@@ -164,6 +165,7 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
             <option value="bracelet">Vòng tay</option>
             <option value="ring">Nhẫn</option>
             <option value="earring">Hoa tai</option>
+            <option value="keychain">Móc khóa</option>
             <option value="other">Khác</option>
           </select>
         </div>

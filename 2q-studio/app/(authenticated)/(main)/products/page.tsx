@@ -17,7 +17,7 @@ import { toast } from "sonner";
 const FALLBACK_IMAGE =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='300' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E";
 
-export default function AdminProductsPage() {
+export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [filterTier, setFilterTier] = useState<string>("all");
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -280,6 +280,7 @@ export default function AdminProductsPage() {
                     <option value="bracelet">Vòng tay</option>
                     <option value="ring">Nhẫn</option>
                     <option value="earring">Hoa tai</option>
+                    <option value="keychain">Móc khóa</option>
                     <option value="other">Khác</option>
                   </select>
                 </div>

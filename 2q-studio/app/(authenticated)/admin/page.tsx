@@ -67,7 +67,7 @@ export default function AdminDashboardPage() {
 
       <h2 className="font-sans text-xl font-medium mt-8 mb-4">Quản lý</h2>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-[1px] bg-rule border border-rule">
-        <Link href="/admin/products" className="bg-paper p-4 flex flex-col items-center justify-center gap-2 hover:bg-surface transition-colors aspect-square">
+        <Link href="/products" className="bg-paper p-4 flex flex-col items-center justify-center gap-2 hover:bg-surface transition-colors aspect-square">
           <Package size={24} className="text-ink" />
           <span className="font-medium">Sản phẩm</span>
         </Link>
