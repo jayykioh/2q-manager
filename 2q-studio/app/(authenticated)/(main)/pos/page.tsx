@@ -14,6 +14,7 @@ const FALLBACK_IMAGE =
 export default function StaffPosPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterTier, setFilterTier] = useState("all");
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [mounted, setMounted] = useState(false);
@@ -127,17 +128,33 @@ export default function StaffPosPage() {
         <div className="flex-1">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
             <h2 className="font-sans text-xl font-medium">Sản phẩm có sẵn</h2>
-            <input 
-              type="text" 
-              placeholder="Tìm theo tên hoặc SKU..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="border border-rule p-2 rounded-sm w-full md:w-64 bg-paper"
-            />
+            <div className="flex gap-2 w-full md:w-auto">
+              <select 
+                value={filterTier}
+                onChange={(e) => setFilterTier(e.target.value)}
+                className="border border-rule p-2 rounded-sm bg-paper text-sm"
+              >
+                <option value="all">Tất cả hạng</option>
+                <option value="standard">Thường (#)</option>
+                <option value="premium">Xịn ($)</option>
+                <option value="done">Hoàn thành (&)</option>
+              </select>
+              <input 
+                type="text" 
+                placeholder="Tìm theo tên hoặc SKU..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="border border-rule p-2 rounded-sm w-full md:w-64 bg-paper"
+              />
+            </div>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[1px] bg-rule border border-rule">
-            {products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase())).map((p) => {
+            {products.filter(p => {
+              const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase());
+              const matchesTier = filterTier === "all" || p.tier === filterTier;
+              return matchesSearch && matchesTier;
+            }).map((p) => {
               const inCart = cart.items.some((i) => i.product_id === p.id);
               const images = p.product_images || [];
               const primaryImage = images.find((img: any) => img.is_primary) || images[0];

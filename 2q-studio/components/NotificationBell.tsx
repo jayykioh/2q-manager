@@ -9,7 +9,7 @@ interface NotificationItem {
   id: string;
   type: string;
   title: string;
-  message: string;
+  body: string;
   created_at: string;
   read_at: string | null;
 }
@@ -40,7 +40,7 @@ export function NotificationBell() {
         .from("notification_recipients")
         .select(`
           read_at,
-          notifications ( id, type, title, message, created_at )
+          notifications ( id, type, title, body, created_at )
         `)
         .eq("user_id", uid)
         .order("notifications(created_at)", { ascending: false })
@@ -80,16 +80,27 @@ export function NotificationBell() {
           if (data && !error) {
             const newNotif: NotificationItem = { ...data, read_at: null };
             setNotifications(prev => [newNotif, ...prev]);
-            
-            // Show in-app toast
-            toast.info(newNotif.title, { description: newNotif.message });
 
-            // Show native browser notification if granted
+            // Show native PWA browser notification if granted
             if ("Notification" in window && Notification.permission === "granted") {
-              new Notification(newNotif.title, {
-                body: newNotif.message,
-                icon: "/favicon.ico"
-              });
+              if ("serviceWorker" in navigator) {
+                navigator.serviceWorker.ready.then((registration) => {
+                  registration.showNotification(newNotif.title, {
+                    body: newNotif.body,
+                    icon: "/favicon.ico"
+                  });
+                }).catch(() => {
+                  new Notification(newNotif.title, {
+                    body: newNotif.body,
+                    icon: "/favicon.ico"
+                  });
+                });
+              } else {
+                new Notification(newNotif.title, {
+                  body: newNotif.body,
+                  icon: "/favicon.ico"
+                });
+              }
             }
           }
         }
@@ -208,7 +219,7 @@ export function NotificationBell() {
                         {new Date(n.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}
                       </div>
                     </div>
-                    <div className="text-xs text-mid mb-2 break-words">{n.message}</div>
+                    <div className="text-xs text-mid mb-2 break-words">{n.body}</div>
                     
                     {!n.read_at && (
                       <button 

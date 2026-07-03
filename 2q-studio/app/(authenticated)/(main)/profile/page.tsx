@@ -139,6 +139,28 @@ export default function StaffProfilePage() {
 
       <ThemeSelector />
 
+      <div className="bg-paper border border-rule p-4 my-4">
+        <h3 className="font-medium mb-2">Thông báo</h3>
+        <p className="text-sm text-mid mb-4">Nhận thông báo khi có đơn hàng mới hoặc thu chi trên thiết bị này.</p>
+        <button
+          onClick={async () => {
+            if (!("Notification" in window)) {
+              alert("Trình duyệt không hỗ trợ thông báo.");
+              return;
+            }
+            const perm = await Notification.requestPermission();
+            if (perm === "granted") {
+              alert("Đã cấp quyền nhận thông báo!");
+            } else {
+              alert("Bạn đã từ chối nhận thông báo.");
+            }
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-sm font-medium hover:bg-blue-700 transition-colors text-sm"
+        >
+          Bật thông báo thiết bị
+        </button>
+      </div>
+
       <div className="bg-paper border border-rule p-4">
         <h3 className="font-medium mb-4">Đổi mật khẩu</h3>
         <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-sm">
