@@ -274,6 +274,5 @@ export default function StaffPosPage() {
           </div>
         </div>
       </div>
-    </>
   );
 }

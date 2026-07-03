@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/utils";
 import dayjs from "dayjs";
 
 export default async function BillPage({ params }: { params: { id: string } }) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
