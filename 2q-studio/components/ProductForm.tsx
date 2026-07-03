@@ -30,17 +30,29 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
-      const compressedFiles = await Promise.all(
-        files.map((file) =>
-          imageCompression(file, {
+      const validFiles = [];
+
+      for (const file of files) {
+        try {
+          // Thử nén ảnh
+          const compressed = await imageCompression(file, {
             maxSizeMB: 1,
             maxWidthOrHeight: 1200,
             useWebWorker: true,
             fileType: "image/webp",
-          })
-        )
-      );
-      setImages((prev) => [...prev, ...compressedFiles]);
+          });
+          validFiles.push(compressed);
+        } catch (err: any) {
+          console.error("Lỗi nén ảnh:", err);
+          toast.error(`Không thể nén ảnh ${file.name}, đang dùng ảnh gốc. Lỗi: ${err.message || ""}`);
+          validFiles.push(file);
+        }
+      }
+
+      setImages((prev) => [...prev, ...validFiles]);
+      
+      // Reset input để có thể chọn lại cùng 1 file (lỗi kinh điển trên mobile)
+      e.target.value = "";
     }
   };
 
