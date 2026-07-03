@@ -24,7 +24,14 @@ export default function AdminDashboardPage() {
         .eq("business_date", businessDate)
         .neq("status", "cancelled");
 
-      const todayRev = todayOrders?.reduce((acc, curr) => acc + Number(curr.total), 0) || 0;
+      const { data: todayTransactions } = await supabase
+        .from("transactions")
+        .select("amount")
+        .eq("business_date", businessDate)
+        .eq("type", "income")
+        .eq("status", "completed");
+
+      const todayRev = todayTransactions?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
 
       const { count: productCount } = await supabase
         .from("products")

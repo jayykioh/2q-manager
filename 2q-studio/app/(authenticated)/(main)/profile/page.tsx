@@ -39,11 +39,12 @@ export default function StaffProfilePage() {
       
       const [ordersResponse, transactionsResponse] = await Promise.all([
         supabase
-          .from("orders")
-          .select("total")
-          .eq("created_by", user.id)
+          .from("transactions")
+          .select("amount")
+          .eq("recorded_by", user.id)
           .eq("business_date", businessDate)
-          .neq("status", "cancelled"),
+          .eq("type", "income")
+          .eq("status", "completed"),
         profData.role === "admin" 
           ? supabase
               .from("transactions")
@@ -53,7 +54,7 @@ export default function StaffProfilePage() {
           : Promise.resolve({ data: null })
       ]);
 
-      const personalRev = ordersResponse.data?.reduce((acc, curr) => acc + Number(curr.total), 0) || 0;
+      const personalRev = ordersResponse.data?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
       
       let totalIn = 0;
       let totalOut = 0;
