@@ -10,7 +10,7 @@ const ProductForm = dynamic(() => import("@/components/ProductForm").then((mod) 
   loading: () => <div className="p-8 border border-rule bg-surface animate-pulse h-[400px]"></div>,
   ssr: false,
 });
-import { Check, X, Edit2, Trash2 } from "lucide-react";
+import { Check, X, Edit2, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 // Self-hosted inline SVG — no external dependency, works in prod & dev.
@@ -23,6 +23,11 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deleteModalProductId, setDeleteModalProductId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userRole, setUserRole] = useState<string>("staff");
+  
+  // States for Image Preview Carousel
+  const [previewImages, setPreviewImages] = useState<string[] | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number>(0);
   const supabase = createClient();
 
   const fetchProducts = async () => {
@@ -35,6 +40,14 @@ export default function ProductsPage() {
   };
 
   useEffect(() => {
+    const fetchUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+        if (data) setUserRole(data.role);
+      }
+    };
+    fetchUserRole();
     fetchProducts();
   }, []);
 
@@ -137,6 +150,34 @@ export default function ProductsPage() {
     }
   };
 
+  const openPreview = (product: any) => {
+    const images = product.product_images || [];
+    if (images.length === 0) return;
+    
+    // Sort by sort_order
+    const sorted = [...images].sort((a: any, b: any) => a.sort_order - b.sort_order);
+    const urls = sorted.map((img: any) => img.public_url).filter(Boolean);
+    
+    if (urls.length > 0) {
+      setPreviewImages(urls);
+      setPreviewIndex(0);
+    }
+  };
+
+  const nextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (previewImages) {
+      setPreviewIndex((prev) => (prev + 1) % previewImages.length);
+    }
+  };
+
+  const prevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (previewImages) {
+      setPreviewIndex((prev) => (prev - 1 + previewImages.length) % previewImages.length);
+    }
+  };
+
   const filteredProducts = products.filter(p => filterTier === "all" || p.tier === filterTier);
 
   return (
@@ -167,13 +208,16 @@ export default function ProductsPage() {
             return (
               <div key={p.id} className="bg-paper border border-rule flex flex-col group relative">
                 {/* Image Section */}
-                <div className="aspect-square w-full bg-surface border-b border-rule relative overflow-hidden">
+                <div 
+                  className="aspect-square w-full bg-surface border-b border-rule relative overflow-hidden cursor-pointer"
+                  onClick={() => openPreview(p)}
+                >
                   <Image
                     src={imageUrl}
                     alt={p.name}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    className="object-cover"
+                    className="object-cover transition-transform hover:scale-105"
                     loading="lazy"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).srcset = "";
@@ -181,28 +225,35 @@ export default function ProductsPage() {
                     }}
                   />
                   
+                  {/* Image count badge */}
+                  {images.length > 1 && (
+                    <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm">
+                      1/{images.length}
+                    </div>
+                  )}
+                  
                   {/* Status Badges */}
                   <div className="absolute top-2 left-2 flex flex-col gap-1">
                     {p.approval_status === "pending" && (
-                      <span className="bg-amber-500 text-white text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm">Pending</span>
+                      <span className="bg-amber-500 text-white text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm shadow-sm">Pending</span>
                     )}
                     {p.status !== "in_stock" && (
-                      <span className="bg-red-500 text-white text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm">{p.status}</span>
+                      <span className="bg-red-500 text-white text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm shadow-sm">{p.status}</span>
                     )}
                   </div>
                   
-                  {/* Action Buttons overlay on hover */}
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Action Buttons overlay: always visible on mobile, hover on large screens */}
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                     <button 
-                      onClick={() => setEditingProduct(p)}
-                      className="p-1.5 bg-paper/90 backdrop-blur-sm border border-rule rounded-sm hover:bg-surface text-ink"
+                      onClick={(e) => { e.stopPropagation(); setEditingProduct(p); }}
+                      className="p-1.5 bg-paper/90 backdrop-blur-sm shadow-sm border border-rule rounded-sm hover:bg-surface text-ink"
                       title="Chỉnh sửa"
                     >
                       <Edit2 size={14} />
                     </button>
                     <button 
-                      onClick={() => handleDeleteProduct(p.id)}
-                      className="p-1.5 bg-paper/90 backdrop-blur-sm border border-rule rounded-sm hover:bg-destructive hover:text-white text-destructive transition-colors"
+                      onClick={(e) => { e.stopPropagation(); handleDeleteProduct(p.id); }}
+                      className="p-1.5 bg-paper/90 backdrop-blur-sm shadow-sm border border-rule rounded-sm hover:bg-destructive hover:text-white text-destructive transition-colors"
                       title="Xóa"
                     >
                       <Trash2 size={14} />
@@ -220,7 +271,7 @@ export default function ProductsPage() {
                   </div>
                   
                   {/* Approval Actions */}
-                  {p.approval_status === "pending" && (
+                  {userRole === "admin" && p.approval_status === "pending" && (
                     <div className="flex gap-2 mt-3 pt-3 border-t border-rule">
                       <button onClick={() => handleApprove(p.id, "approved")} className="flex-1 py-1.5 flex justify-center items-center bg-success text-paper rounded-sm">
                         <Check size={14} />
@@ -283,6 +334,8 @@ export default function ProductsPage() {
                     <option value="earring">Hoa tai</option>
                     <option value="keychain">Móc khóa</option>
                     <option value="necklace">Dây chuyền</option>
+                    <option value="spoon">Muỗng</option>
+                    <option value="fork">Nĩa</option>
                     <option value="other">Khác</option>
                   </select>
                 </div>
@@ -342,6 +395,65 @@ export default function ProductsPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Image Preview / Carousel Modal */}
+      {previewImages && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center backdrop-blur-sm p-4"
+          onClick={() => setPreviewImages(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 p-2 text-white/70 hover:text-white bg-black/20 rounded-full transition-colors"
+            onClick={(e) => { e.stopPropagation(); setPreviewImages(null); }}
+          >
+            <X size={24} />
+          </button>
+
+          <div className="relative w-full max-w-4xl max-h-[80vh] flex items-center justify-center">
+            {previewImages.length > 1 && (
+              <button 
+                onClick={prevImage}
+                className="absolute left-2 md:-left-12 p-2 bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors z-10"
+              >
+                <ChevronLeft size={32} />
+              </button>
+            )}
+
+            <div 
+              className="relative w-full aspect-square md:aspect-auto md:h-[80vh] flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img 
+                src={previewImages[previewIndex]} 
+                alt="Product preview" 
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
+
+            {previewImages.length > 1 && (
+              <button 
+                onClick={nextImage}
+                className="absolute right-2 md:-right-12 p-2 bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors z-10"
+              >
+                <ChevronRight size={32} />
+              </button>
+            )}
+          </div>
+
+          {/* Dots Indicator */}
+          {previewImages.length > 1 && (
+            <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-2" onClick={e => e.stopPropagation()}>
+              {previewImages.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPreviewIndex(i)}
+                  className={`w-2.5 h-2.5 rounded-full transition-colors ${i === previewIndex ? 'bg-white' : 'bg-white/30 hover:bg-white/50'}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
