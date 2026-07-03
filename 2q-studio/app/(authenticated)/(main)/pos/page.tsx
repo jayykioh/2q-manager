@@ -17,7 +17,10 @@ export default function StaffPosPage() {
   const [filterTier, setFilterTier] = useState("all");
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [orderNotes, setOrderNotes] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [displayLimit, setDisplayLimit] = useState(6);
+
   const supabase = createClient();
   const cart = useCartStore();
 
@@ -59,6 +62,7 @@ export default function StaffPosPage() {
       p_customer_name: "Khách lẻ",
       p_customer_phone: null,
       p_idempotency_key: idempotencyKey,
+      p_notes: orderNotes ? orderNotes : null,
     });
 
     if (error) {
@@ -71,16 +75,13 @@ export default function StaffPosPage() {
         items: orderItems,
         total: orderTotal,
         date: new Date().toLocaleString(),
-        paymentMethod: paymentMethod
+        paymentMethod: paymentMethod,
+        notes: orderNotes,
       });
       
       cart.clearCart();
+      setOrderNotes("");
       fetchProducts();
-      
-      // Give React time to render the print section, then print
-      setTimeout(() => {
-        window.print();
-      }, 100);
     }
   };
 
@@ -117,6 +118,11 @@ export default function StaffPosPage() {
                 lastOrder.paymentMethod
               }
             </div>
+            {lastOrder.notes && (
+              <div className="mt-1 text-left text-[10px] break-words">
+                Ghi chú: {lastOrder.notes}
+              </div>
+            )}
             <div className="text-center mt-4 text-[10px]">Cảm ơn quý khách!</div>
           </>
         )}
@@ -154,7 +160,7 @@ export default function StaffPosPage() {
               const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase());
               const matchesTier = filterTier === "all" || p.tier === filterTier;
               return matchesSearch && matchesTier;
-            }).map((p) => {
+            }).slice(0, displayLimit).map((p) => {
               const inCart = cart.items.some((i) => i.product_id === p.id);
               const images = p.product_images || [];
               const primaryImage = images.find((img: any) => img.is_primary) || images[0];
@@ -209,6 +215,22 @@ export default function StaffPosPage() {
               );
             })}
           </div>
+
+          {/* Show More Button */}
+          {displayLimit < products.filter(p => {
+            const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesTier = filterTier === "all" || p.tier === filterTier;
+            return matchesSearch && matchesTier;
+          }).length && (
+            <div className="mt-8 mb-8 text-center">
+              <button
+                onClick={() => setDisplayLimit(prev => prev + 6)}
+                className="px-6 py-2 border border-rule hover:bg-surface transition-colors font-medium text-sm rounded-sm"
+              >
+                Xem thêm
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Cart Panel */}
@@ -260,6 +282,16 @@ export default function StaffPosPage() {
               </div>
             </div>
 
+            <div className="mb-4">
+              <div className="text-sm font-medium mb-2">Ghi chú đơn hàng</div>
+              <textarea
+                value={orderNotes}
+                onChange={(e) => setOrderNotes(e.target.value)}
+                placeholder="Khách cần ghi chú thêm..."
+                className="w-full border border-rule bg-paper p-2 text-sm min-h-[60px] resize-none"
+              />
+            </div>
+
             <div className="flex justify-between font-mono text-lg mb-4">
               <span>Tổng:</span>
               <span>{cart.getTotal().toLocaleString()}đ</span>
@@ -267,10 +299,18 @@ export default function StaffPosPage() {
             <button
               onClick={handleCheckout}
               disabled={cart.items.length === 0}
-              className="w-full bg-ink text-paper py-3 font-medium  uppercase tracking-wider disabled:opacity-50"
+              className="w-full bg-ink text-paper py-3 font-medium uppercase tracking-wider disabled:opacity-50"
             >
-              Thanh toán & In Bill
+              Thanh toán
             </button>
+            {lastOrder && (
+              <button
+                onClick={() => window.print()}
+                className="w-full mt-2 bg-paper text-ink border border-ink py-3 font-medium uppercase tracking-wider hover:bg-surface transition-colors"
+              >
+                In Bill (Đơn {lastOrder.id.slice(0, 8)})
+              </button>
+            )}
           </div>
         </div>
       </div>

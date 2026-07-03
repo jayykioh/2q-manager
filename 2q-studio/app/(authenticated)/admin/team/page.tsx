@@ -54,6 +54,23 @@ export default function AdminTeamPage() {
     setActionLoading(false);
   };
 
+  const handleDeactivate = async (userId: string, currentStatus: boolean) => {
+    if (!confirm(`Bạn có chắc muốn ${currentStatus ? 'vô hiệu hóa' : 'kích hoạt lại'} nhân viên này?`)) return;
+
+    setActionLoading(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_active: !currentStatus })
+      .eq("id", userId);
+
+    if (error) {
+      alert(`Lỗi: ${error.message}`);
+    } else {
+      await fetchProfiles();
+    }
+    setActionLoading(false);
+  };
+
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
@@ -66,22 +83,42 @@ export default function AdminTeamPage() {
       ) : (
         <div className="space-y-4">
           {profiles.map(profile => (
-            <div key={profile.id} className="border border-rule p-4 bg-paper flex items-center justify-between">
+            <div key={profile.id} className={`border border-rule p-4 bg-paper flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between ${!profile.is_active ? 'opacity-60' : ''}`}>
               <div>
-                <div className="font-medium text-lg">{profile.full_name}</div>
+                <div className="font-medium text-lg flex items-center gap-2">
+                  {profile.full_name}
+                  {!profile.is_active && (
+                    <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded-full">
+                      Đã vô hiệu hóa
+                    </span>
+                  )}
+                </div>
                 <div className="text-sm text-mid uppercase tracking-wider mt-1">{profile.role}</div>
               </div>
-              <button
-                onClick={() => {
-                  setSelectedUserId(selectedUserId === profile.id ? null : profile.id);
-                  setActionMessage(null);
-                  setNewPassword("");
-                }}
-                className="flex items-center gap-2 px-3 py-2 border border-rule hover:bg-surface transition-colors text-sm font-medium"
-              >
-                <UserCog size={16} />
-                Đổi MK
-              </button>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => {
+                    setSelectedUserId(selectedUserId === profile.id ? null : profile.id);
+                    setActionMessage(null);
+                    setNewPassword("");
+                  }}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 border border-rule hover:bg-surface transition-colors text-sm font-medium"
+                >
+                  <UserCog size={16} />
+                  Đổi MK
+                </button>
+                <button
+                  onClick={() => handleDeactivate(profile.id, profile.is_active)}
+                  disabled={actionLoading}
+                  className={`flex-1 sm:flex-none flex items-center justify-center px-3 py-2 border transition-colors text-sm font-medium ${
+                    profile.is_active 
+                      ? 'border-destructive/20 text-destructive hover:bg-destructive hover:text-white'
+                      : 'border-green-600/20 text-green-600 hover:bg-green-600 hover:text-white'
+                  }`}
+                >
+                  {profile.is_active ? "Vô hiệu hóa" : "Kích hoạt"}
+                </button>
+              </div>
             </div>
           ))}
 

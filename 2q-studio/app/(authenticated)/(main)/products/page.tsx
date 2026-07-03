@@ -24,6 +24,7 @@ export default function ProductsPage() {
   const [deleteModalProductId, setDeleteModalProductId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userRole, setUserRole] = useState<string>("staff");
+  const [displayLimit, setDisplayLimit] = useState(8);
   
   // States for Image Preview Carousel
   const [previewImages, setPreviewImages] = useState<string[] | null>(null);
@@ -191,15 +192,15 @@ export default function ProductsPage() {
             <h2 className="font-sans text-2xl font-bold uppercase tracking-wide">Kho hàng</h2>
           </div>
           <div className="flex gap-2 flex-wrap text-sm font-medium">
-             <button onClick={() => setFilterTier("all")} className={`px-3 py-1 border transition-colors ${filterTier === "all" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Tất cả</button>
-             <button onClick={() => setFilterTier("standard")} className={`px-3 py-1 border transition-colors ${filterTier === "standard" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Thường</button>
-             <button onClick={() => setFilterTier("premium")} className={`px-3 py-1 border transition-colors ${filterTier === "premium" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Xịn</button>
-             <button onClick={() => setFilterTier("done")} className={`px-3 py-1 border transition-colors ${filterTier === "done" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Hoàn thành</button>
+             <button onClick={() => { setFilterTier("all"); setDisplayLimit(8); }} className={`px-3 py-1 border transition-colors ${filterTier === "all" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Tất cả</button>
+             <button onClick={() => { setFilterTier("standard"); setDisplayLimit(8); }} className={`px-3 py-1 border transition-colors ${filterTier === "standard" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Thường</button>
+             <button onClick={() => { setFilterTier("premium"); setDisplayLimit(8); }} className={`px-3 py-1 border transition-colors ${filterTier === "premium" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Xịn</button>
+             <button onClick={() => { setFilterTier("done"); setDisplayLimit(8); }} className={`px-3 py-1 border transition-colors ${filterTier === "done" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Hoàn thành</button>
           </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map((p) => {
+          {filteredProducts.slice(0, displayLimit).map((p) => {
             // Get the primary image, or the first image, or fallback
             const images = p.product_images || [];
             const primaryImage = images.find((img: any) => img.is_primary) || images[0];
@@ -243,22 +244,24 @@ export default function ProductsPage() {
                   </div>
                   
                   {/* Action Buttons overlay: always visible on mobile, hover on large screens */}
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setEditingProduct(p); }}
-                      className="p-1.5 bg-paper/90 backdrop-blur-sm shadow-sm border border-rule rounded-sm hover:bg-surface text-ink"
-                      title="Chỉnh sửa"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleDeleteProduct(p.id); }}
-                      className="p-1.5 bg-paper/90 backdrop-blur-sm shadow-sm border border-rule rounded-sm hover:bg-destructive hover:text-white text-destructive transition-colors"
-                      title="Xóa"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                  {userRole === "admin" && (
+                    <div className="absolute top-2 right-2 flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setEditingProduct(p); }}
+                        className="p-1.5 bg-paper/90 backdrop-blur-sm shadow-sm border border-rule rounded-sm hover:bg-surface text-ink"
+                        title="Chỉnh sửa"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteProduct(p.id); }}
+                        className="p-1.5 bg-paper/90 backdrop-blur-sm shadow-sm border border-rule rounded-sm hover:bg-destructive hover:text-white text-destructive transition-colors"
+                        title="Xóa"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Info Section */}
@@ -286,6 +289,19 @@ export default function ProductsPage() {
             );
           })}
         </div>
+
+        {/* Show More Button */}
+        {displayLimit < filteredProducts.length && (
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => setDisplayLimit(prev => prev + 8)}
+              className="px-6 py-2 border border-rule hover:bg-surface transition-colors font-medium text-sm rounded-sm"
+            >
+              Xem thêm ({filteredProducts.length - displayLimit} sản phẩm)
+            </button>
+          </div>
+        )}
+
         {products.length === 0 && (
           <div className="text-mid p-8 border border-rule text-center bg-surface">
             Chưa có sản phẩm nào
