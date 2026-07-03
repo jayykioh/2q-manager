@@ -281,6 +281,7 @@ export default function ProductsPage() {
                     <option value="ring">Nhẫn</option>
                     <option value="earring">Hoa tai</option>
                     <option value="keychain">Móc khóa</option>
+                    <option value="necklace">Dây chuyền</option>
                     <option value="other">Khác</option>
                   </select>
                 </div>
