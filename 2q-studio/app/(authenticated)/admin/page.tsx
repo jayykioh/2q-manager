@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { Users, Package, FileText, Settings } from "lucide-react";
+import { Users, Package, FileText, Settings, Wallet } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const [metrics, setMetrics] = useState({
@@ -82,6 +82,10 @@ export default function AdminDashboardPage() {
         <Link href="/admin/settings" className="bg-paper p-4 flex flex-col items-center justify-center gap-2 hover:bg-surface transition-colors aspect-square">
           <Settings size={24} className="text-ink" />
           <span className="font-medium">Cài đặt</span>
+        </Link>
+        <Link href="/admin/transactions" className="bg-paper p-4 flex flex-col items-center justify-center gap-2 hover:bg-surface transition-colors aspect-square">
+          <Wallet size={24} className="text-ink" />
+          <span className="font-medium">Thu Chi</span>
         </Link>
       </div>
     </div>

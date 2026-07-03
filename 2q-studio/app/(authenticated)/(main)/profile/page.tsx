@@ -49,6 +49,7 @@ export default function StaffProfilePage() {
               .from("transactions")
               .select("type, amount")
               .eq("business_date", businessDate)
+              .eq("status", "completed")
           : Promise.resolve({ data: null })
       ]);
 
@@ -59,8 +60,8 @@ export default function StaffProfilePage() {
       
       if (transactionsResponse.data) {
         transactionsResponse.data.forEach(t => {
-          if (t.type === 'in') totalIn += Number(t.amount);
-          if (t.type === 'out') totalOut += Number(t.amount);
+          if (t.type === 'income') totalIn += Number(t.amount);
+          if (t.type === 'expense') totalOut += Number(t.amount);
         });
       }
 

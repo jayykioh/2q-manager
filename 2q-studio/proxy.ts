@@ -29,8 +29,8 @@ export async function proxy(request: NextRequest) {
 
   let user = null;
   try {
-    const { data } = await supabase.auth.getUser()
-    user = data.user;
+    const { data } = await supabase.auth.getSession();
+    user = data.session?.user || null;
   } catch (error) {
     console.error("Proxy fetch error (Supabase unreachable):", error);
   }
