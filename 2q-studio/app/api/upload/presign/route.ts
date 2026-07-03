@@ -24,7 +24,7 @@ const rateLimitMap = new Map<string, { count: number; expiresAt: number }>();
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
   const windowMs = 60 * 1000; // 1 minute
-  const maxReq = 20;
+  const maxReq = 150; // Increased to allow bulk product creation
 
   const userLimit = rateLimitMap.get(ip);
   if (!userLimit || userLimit.expiresAt < now) {

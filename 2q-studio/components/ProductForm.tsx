@@ -253,7 +253,7 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
           ))}
           <label className="w-20 h-20 border border-dashed border-mid flex items-center justify-center cursor-pointer hover:bg-surface">
             <Upload size={20} className="text-mid" />
-            <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
+            <input type="file" accept="image/jpeg, image/png, image/webp, image/avif" multiple className="hidden" onChange={handleImageUpload} />
           </label>
         </div>
       </div>

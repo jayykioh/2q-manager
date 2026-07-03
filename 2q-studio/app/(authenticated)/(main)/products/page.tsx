@@ -328,7 +328,7 @@ export default function ProductsPage() {
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Ảnh sản phẩm mới (Bỏ trống nếu không đổi)</label>
-                <input type="file" name="newImage" accept="image/*" className="w-full border border-rule p-2 text-sm bg-paper" />
+                <input type="file" name="newImage" accept="image/jpeg, image/png, image/webp, image/avif" className="w-full border border-rule p-2 text-sm bg-paper" />
               </div>
 
               <div>
