@@ -30,7 +30,7 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
-      const validFiles = [];
+      const validFiles: File[] = [];
 
       for (const file of files) {
         try {
