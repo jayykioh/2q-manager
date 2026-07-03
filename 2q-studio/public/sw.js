@@ -54,3 +54,48 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+self.addEventListener('push', (event) => {
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      const options = {
+        body: data.body || '',
+        icon: data.icon || '/favicon.ico',
+        data: data.data || {},
+        vibrate: [100, 50, 100],
+      };
+
+      event.waitUntil(
+        self.registration.showNotification(data.title || 'Thông báo mới', options)
+      );
+    } catch (e) {
+      // If not JSON, just show as text
+      event.waitUntil(
+        self.registration.showNotification('Thông báo mới', {
+          body: event.data.text(),
+          icon: '/favicon.ico'
+        })
+      );
+    }
+  }
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  // Focus or open the app
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      if (clientList.length > 0) {
+        let client = clientList[0];
+        for (let i = 0; i < clientList.length; i++) {
+          if (clientList[i].focused) {
+            client = clientList[i];
+          }
+        }
+        return client.focus();
+      }
+      return clients.openWindow('/');
+    })
+  );
+});

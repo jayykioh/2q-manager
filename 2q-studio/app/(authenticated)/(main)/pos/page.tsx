@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import { useCartStore } from "@/stores/useCartStore";
+import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ export default function StaffPosPage() {
 
   const supabase = createClient();
   const cart = useCartStore();
+  const router = useRouter();
 
   const fetchProducts = async () => {
     const { data } = await supabase
@@ -86,49 +88,7 @@ export default function StaffPosPage() {
   };
 
   return (
-    <>
-      {/* PRINT ONLY SECTION - 80mm Receipt Fallback */}
-      <div className="hidden print:block w-[80mm] text-black font-mono text-xs">
-        <div className="text-center font-bold mb-2">2Q STUDIO</div>
-        <div className="text-center mb-4">Hóa đơn bán lẻ</div>
-        {lastOrder && (
-          <>
-            <div className="mb-2 border-b border-black pb-2">
-              Ngày: {lastOrder.date}<br/>
-            </div>
-            <table className="w-full mb-2">
-              <tbody>
-                {lastOrder.items.map((item: any, i: number) => (
-                  <tr key={i}>
-                    <td className="py-1">{item.name}<br/><span className="text-[10px]">{item.sku}</span></td>
-                    <td className="py-1 text-right align-top">{item.sale_price.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="border-t border-black pt-2 flex justify-between font-bold text-sm">
-              <span>TỔNG</span>
-              <span>{lastOrder.total.toLocaleString()}</span>
-            </div>
-            <div className="mt-1 text-left text-[10px]">
-              PTTT: {
-                lastOrder.paymentMethod === 'cash' ? 'Tiền mặt' : 
-                lastOrder.paymentMethod === 'transfer' ? 'Chuyển khoản' : 
-                lastOrder.paymentMethod === 'card' ? 'Quẹt thẻ' : 
-                lastOrder.paymentMethod
-              }
-            </div>
-            {lastOrder.notes && (
-              <div className="mt-1 text-left text-[10px] break-words">
-                Ghi chú: {lastOrder.notes}
-              </div>
-            )}
-            <div className="text-center mt-4 text-[10px]">Cảm ơn quý khách!</div>
-          </>
-        )}
-      </div>
 
-      {/* SCREEN UI */}
       <div className="p-4 flex flex-col h-full lg:flex-row gap-4 print:hidden">
         {/* Product Grid */}
         <div className="flex-1">
@@ -305,10 +265,10 @@ export default function StaffPosPage() {
             </button>
             {lastOrder && (
               <button
-                onClick={() => window.print()}
+                onClick={() => router.push(`/pos/bill/${lastOrder.id}`)}
                 className="w-full mt-2 bg-paper text-ink border border-ink py-3 font-medium uppercase tracking-wider hover:bg-surface transition-colors"
               >
-                In Bill (Đơn {lastOrder.id.slice(0, 8)})
+                Xem Bill (Đơn {lastOrder.id.slice(0, 8)})
               </button>
             )}
           </div>
