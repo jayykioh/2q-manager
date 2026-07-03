@@ -9,6 +9,18 @@ DROP FUNCTION IF EXISTS checkout_order(
   UUID
 );
 
+-- Drop the broken signature (8 parameters) if we need to replace it
+DROP FUNCTION IF EXISTS checkout_order(
+  UUID,
+  JSONB,
+  NUMERIC,
+  public.payment_method,
+  TEXT,
+  TEXT,
+  UUID,
+  TEXT
+);
+
 -- Recreate with 8 parameters including p_notes
 CREATE OR REPLACE FUNCTION checkout_order(
   p_store_id UUID,
@@ -110,20 +122,23 @@ BEGIN
     SET status = 'sold', sold_at = NOW(), updated_at = NOW()
     WHERE id = v_product_id;
 
-    -- Log movement
+    -- Insert Inventory Movement
     INSERT INTO public.inventory_movements (
-      product_id, from_store_id, movement_type, reason, created_by
+      product_id, from_store_id, movement_type, order_id, reason, created_by
     ) VALUES (
-      v_product_id, p_store_id, 'sale', 'Order ' || v_order_number, v_user_id
+      v_product_id, p_store_id, 'sale', v_order_id, 'POS Checkout', v_user_id
     );
   END LOOP;
 
-  -- 6. Insert transaction
+  -- 6. Insert Transaction (Income)
   INSERT INTO public.transactions (
-    store_id, type, category, amount, payment_method, reference_id, reference_type, created_by
+    store_id, type, category, amount, description, recorded_by, order_id
   ) VALUES (
-    p_store_id, 'income', 'sale', v_total, p_payment_method, v_order_id, 'order', v_user_id
+    p_store_id, 'income', 'sale', v_total, 'Thanh toán đơn hàng ' || v_order_number, v_user_id, v_order_id
   );
+
+  -- 7. Insert Async Jobs (MVP)
+  INSERT INTO public.invoice_jobs (order_id) VALUES (v_order_id);
 
   RETURN v_order_id;
 END;
