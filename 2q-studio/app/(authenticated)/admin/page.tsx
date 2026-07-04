@@ -33,17 +33,16 @@ export default function AdminDashboardPage() {
       const dashboardMetrics = data as AdminDashboardMetrics;
 
       setMetrics({
-        revenue: Number(dashboardMetrics.revenue),
-        operatingExpense: Number(dashboardMetrics.operating_expense),
-        difference: Number(dashboardMetrics.difference),
-        totalOrders: Number(dashboardMetrics.total_orders),
-        activeProducts: Number(dashboardMetrics.active_products),
+        revenue: Number(dashboardMetrics.revenue || 0),
+        operatingExpense: Number(dashboardMetrics.operating_expense || 0),
+        difference: Number(dashboardMetrics.difference || 0),
+        totalOrders: Number(dashboardMetrics.total_orders || 0),
+        activeProducts: Number(dashboardMetrics.active_products || 0),
       });
     };
 
     fetchMetrics();
   }, [supabase]);
-
   return (
     <div className="p-4">
       <h2 className="font-sans text-xl font-medium mb-6">Tổng quan Kinh doanh</h2>
