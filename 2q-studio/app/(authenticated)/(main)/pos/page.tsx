@@ -47,7 +47,7 @@ export default function StaffPosPage() {
         toast.error("Checkout thất bại: " + result.error);
       }
     } else {
-      toast.success("Thanh toán thành công!");
+
       // Save snapshot for print
       setLastOrder({
         id: result.orderId!,
@@ -240,12 +240,17 @@ export default function StaffPosPage() {
             {isCheckingOut ? "Đang xử lý..." : "Thanh toán"}
           </button>
           {data.lastOrder && (
-            <button
-              onClick={() => router.push(`/pos/bill/${data.lastOrder!.id}`)}
-              className="w-full mt-2 bg-paper text-ink border border-ink py-3 font-medium uppercase tracking-wider hover:bg-surface transition-colors"
-            >
-              Xem Bill (Đơn {data.lastOrder.id.slice(0, 8)})
-            </button>
+            <div className="mt-4 flex flex-col gap-2">
+              <div className="text-center text-success font-medium text-sm">
+                Thanh toán thành công!
+              </div>
+              <button
+                onClick={() => router.push(`/pos/bill/${data.lastOrder!.id}`)}
+                className="w-full bg-paper text-ink border border-ink py-3 font-medium uppercase tracking-wider hover:bg-surface transition-colors"
+              >
+                Xem Bill (Đơn {data.lastOrder.id.slice(0, 8)})
+              </button>
+            </div>
           )}
         </div>
       </div>
