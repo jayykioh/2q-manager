@@ -38,6 +38,7 @@ DECLARE
   v_url TEXT;
 BEGIN
   v_title := CASE
+    WHEN NEW.entry_kind = 'refund' THEN 'Đơn hàng đã hủy'
     WHEN NEW.order_id IS NOT NULL THEN 'Đơn hàng mới'
     WHEN NEW.type = 'income' THEN 'Khoản thu mới'
     ELSE 'Khoản chi mới'
@@ -46,6 +47,7 @@ BEGIN
   v_body := COALESCE(NULLIF(NEW.description, ''), 'Giao dịch mới')
     || ' - ' || NEW.amount::TEXT || ' VND';
   v_url := CASE
+    WHEN NEW.entry_kind = 'refund' THEN '/admin/orders'
     WHEN NEW.order_id IS NOT NULL THEN '/pos/bill/' || NEW.order_id::TEXT
     ELSE '/admin/transactions'
   END;
@@ -61,6 +63,7 @@ BEGIN
       'order_id', NEW.order_id,
       'store_id', NEW.store_id,
       'transaction_type', NEW.type,
+      'entry_kind', NEW.entry_kind,
       'category', NEW.category,
       'url', v_url
     )

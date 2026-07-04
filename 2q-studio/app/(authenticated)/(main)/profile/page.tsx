@@ -13,20 +13,18 @@ interface Profile {
 }
 
 interface AdminMetrics {
-  gross_income: number;
-  refund_amount: number;
+  revenue: number;
   operating_expense: number;
-  net_cash: number;
+  difference: number;
 }
 
 export default function StaffProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [metrics, setMetrics] = useState({
     personalRevenue: 0,
-    grossIncome: 0,
-    refundAmount: 0,
+    revenue: 0,
     operatingExpense: 0,
-    netCash: 0,
+    difference: 0,
   });
   const [newPassword, setNewPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -61,10 +59,9 @@ export default function StaffProfilePage() {
 
       setMetrics({
         personalRevenue: Number(personalRevenueResponse.data || 0),
-        grossIncome: Number(adminMetrics?.gross_income || 0),
-        refundAmount: Number(adminMetrics?.refund_amount || 0),
+        revenue: Number(adminMetrics?.revenue || 0),
         operatingExpense: Number(adminMetrics?.operating_expense || 0),
-        netCash: Number(adminMetrics?.net_cash || 0),
+        difference: Number(adminMetrics?.difference || 0),
       });
     };
 
@@ -123,22 +120,18 @@ export default function StaffProfilePage() {
       </div>
 
       {profile.role === "admin" && (
-        <div className="grid grid-cols-2 gap-[1px] bg-rule border border-rule mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-[1px] bg-rule border border-rule mb-8">
           <div className="bg-paper p-4">
-            <div className="text-sm text-mid mb-2">Doanh thu gộp</div>
-            <div className="font-mono text-xl text-green-600">+{metrics.grossIncome.toLocaleString()} đ</div>
-          </div>
-          <div className="bg-paper p-4">
-            <div className="text-sm text-mid mb-2">Hoàn tiền</div>
-            <div className="font-mono text-xl text-destructive">-{metrics.refundAmount.toLocaleString()} đ</div>
+            <div className="text-sm text-mid mb-2">Doanh thu</div>
+            <div className="font-mono text-xl text-green-600">{metrics.revenue.toLocaleString()} đ</div>
           </div>
           <div className="bg-paper p-4">
             <div className="text-sm text-mid mb-2">Chi vận hành</div>
-            <div className="font-mono text-xl text-destructive">-{metrics.operatingExpense.toLocaleString()} đ</div>
+            <div className="font-mono text-xl text-destructive">{metrics.operatingExpense.toLocaleString()} đ</div>
           </div>
           <div className="bg-paper p-4">
-            <div className="text-sm text-mid mb-2">Thực thu</div>
-            <div className="font-mono text-2xl">{metrics.netCash.toLocaleString()} đ</div>
+            <div className="text-sm text-mid mb-2">Chênh lệch</div>
+            <div className="font-mono text-2xl">{metrics.difference.toLocaleString()} đ</div>
           </div>
         </div>
       )}

@@ -3,10 +3,10 @@ BEGIN;
 DO $$
 DECLARE
   v_cancel_order_source TEXT;
-  v_cancel_transaction_source TEXT;
   v_guard_source TEXT;
   v_notification_source TEXT;
   v_checkout_source TEXT;
+  v_financial_summary_source TEXT;
   v_count INT;
 BEGIN
   SELECT pg_get_functiondef('public.cancel_order(uuid,text)'::regprocedure)
@@ -32,11 +32,16 @@ BEGIN
     RAISE EXCEPTION 'checkout_order no longer atomically marks orders paid and products sold';
   END IF;
 
-  SELECT pg_get_functiondef('public.cancel_transaction(uuid,text)'::regprocedure)
-  INTO v_cancel_transaction_source;
+  IF to_regprocedure('public.cancel_transaction(uuid,text)') IS NOT NULL THEN
+    RAISE EXCEPTION 'cancel_transaction must not exist; cancel_order is the only cancellation command';
+  END IF;
 
-  IF position('ORDER_TRANSACTION_IMMUTABLE' IN v_cancel_transaction_source) = 0 THEN
-    RAISE EXCEPTION 'cancel_transaction can still cancel order-backed entries';
+  SELECT pg_get_functiondef('public.get_financial_summary(date,date)'::regprocedure)
+  INTO v_financial_summary_source;
+
+  IF position('entry_kind = ''refund''' IN v_financial_summary_source) = 0
+     OR position('entry_kind = ''regular''' IN v_financial_summary_source) = 0 THEN
+    RAISE EXCEPTION 'Financial summary does not separate internal refunds from operating expenses';
   END IF;
 
   SELECT pg_get_functiondef('public.guard_order_transaction_mutation()'::regprocedure)

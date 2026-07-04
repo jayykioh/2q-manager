@@ -6,20 +6,18 @@ import Link from "next/link";
 import { Users, Package, FileText, Settings, Wallet } from "lucide-react";
 
 interface AdminDashboardMetrics {
-  net_revenue: number;
-  gross_income: number;
-  refund_amount: number;
-  net_cash: number;
+  revenue: number;
+  operating_expense: number;
+  difference: number;
   total_orders: number;
   active_products: number;
 }
 
 export default function AdminDashboardPage() {
   const [metrics, setMetrics] = useState({
-    todayRevenue: 0,
-    grossIncome: 0,
-    refundAmount: 0,
-    netCash: 0,
+    revenue: 0,
+    operatingExpense: 0,
+    difference: 0,
     totalOrders: 0,
     activeProducts: 0
   });
@@ -35,10 +33,9 @@ export default function AdminDashboardPage() {
       const dashboardMetrics = data as AdminDashboardMetrics;
 
       setMetrics({
-        todayRevenue: Number(dashboardMetrics.net_revenue),
-        grossIncome: Number(dashboardMetrics.gross_income),
-        refundAmount: Number(dashboardMetrics.refund_amount),
-        netCash: Number(dashboardMetrics.net_cash),
+        revenue: Number(dashboardMetrics.revenue),
+        operatingExpense: Number(dashboardMetrics.operating_expense),
+        difference: Number(dashboardMetrics.difference),
         totalOrders: Number(dashboardMetrics.total_orders),
         activeProducts: Number(dashboardMetrics.active_products),
       });
@@ -51,14 +48,22 @@ export default function AdminDashboardPage() {
     <div className="p-4">
       <h2 className="font-sans text-xl font-medium mb-6">Tổng quan Kinh doanh</h2>
 
-      <div className="grid grid-cols-2 gap-[1px] bg-rule border border-rule">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-[1px] bg-rule border border-rule">
         <div className="bg-paper p-4">
           <div className="text-sm text-mid mb-2">Doanh thu hôm nay</div>
-          <div className="font-mono text-2xl">{metrics.todayRevenue.toLocaleString()}đ</div>
-          <div className="text-[10px] text-mid mt-1">
-            Gộp {metrics.grossIncome.toLocaleString()}đ · Hoàn {metrics.refundAmount.toLocaleString()}đ
-          </div>
+          <div className="font-mono text-2xl">{metrics.revenue.toLocaleString()}đ</div>
         </div>
+        <div className="bg-paper p-4">
+          <div className="text-sm text-mid mb-2">Chi vận hành hôm nay</div>
+          <div className="font-mono text-2xl">{metrics.operatingExpense.toLocaleString()}đ</div>
+        </div>
+        <div className="bg-paper p-4">
+          <div className="text-sm text-mid mb-2">Chênh lệch hôm nay</div>
+          <div className="font-mono text-2xl">{metrics.difference.toLocaleString()}đ</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-[1px] bg-rule border border-rule mt-4">
         <div className="bg-paper p-4">
           <div className="text-sm text-mid mb-2">Đơn hàng hôm nay</div>
           <div className="font-mono text-2xl">{metrics.totalOrders}</div>
@@ -66,10 +71,6 @@ export default function AdminDashboardPage() {
         <div className="bg-paper p-4">
           <div className="text-sm text-mid mb-2">Sản phẩm tồn kho</div>
           <div className="font-mono text-2xl">{metrics.activeProducts}</div>
-        </div>
-        <div className="bg-paper p-4">
-          <div className="text-sm text-mid mb-2">Thực thu hôm nay</div>
-          <div className="font-mono text-2xl">{metrics.netCash.toLocaleString()}đ</div>
         </div>
       </div>
 
