@@ -64,6 +64,13 @@ export default async function BillPage({ params }: { params: { id: string } }) {
       </div>
 
       <div className="bg-white text-black p-6 rounded-md shadow-lg">
+        <div className={`mb-4 border px-3 py-2 text-center text-sm font-bold uppercase ${
+          order.status === "cancelled"
+            ? "border-red-300 bg-red-50 text-red-700"
+            : "border-green-300 bg-green-50 text-green-700"
+        }`}>
+          {order.status === "cancelled" ? "Hóa đơn đã hủy" : "Đã thanh toán"}
+        </div>
         {/* Header */}
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold uppercase">{order.store.name}</h2>

@@ -123,6 +123,13 @@ export default function StaffPosPage() {
         notes: orderNotes,
       });
       
+      // Trigger Web Push Notification asynchronously
+      fetch("/api/notifications/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: data }),
+      }).catch(console.error);
+      
       cart.clearCart();
       setOrderNotes("");
       fetchProducts();

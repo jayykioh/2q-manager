@@ -12,12 +12,21 @@ interface Profile {
   role: "admin" | "staff";
 }
 
+interface AdminMetrics {
+  gross_income: number;
+  refund_amount: number;
+  operating_expense: number;
+  net_cash: number;
+}
+
 export default function StaffProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [metrics, setMetrics] = useState({
     personalRevenue: 0,
-    totalIncome: 0,
-    totalExpense: 0,
+    grossIncome: 0,
+    refundAmount: 0,
+    operatingExpense: 0,
+    netCash: 0,
   });
   const [newPassword, setNewPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -41,42 +50,21 @@ export default function StaffProfilePage() {
       if (!profData) return;
       setProfile(profData as Profile);
 
-      // Get today's metrics
-      const businessDate = new Date().toISOString().split("T")[0]; // MVP client date approximation
-      
-      const [ordersResponse, transactionsResponse] = await Promise.all([
-        supabase
-          .from("transactions")
-          .select("amount")
-          .eq("recorded_by", user.id)
-          .eq("business_date", businessDate)
-          .eq("type", "income")
-          .eq("status", "completed"),
-        profData.role === "admin" 
-          ? supabase
-              .from("transactions")
-              .select("type, amount")
-              .eq("business_date", businessDate)
-              .eq("status", "completed")
-          : Promise.resolve({ data: null })
+      const [personalRevenueResponse, adminMetricsResponse] = await Promise.all([
+        supabase.rpc("get_personal_revenue"),
+        profData.role === "admin"
+          ? supabase.rpc("get_admin_dashboard_metrics").single()
+          : Promise.resolve({ data: null, error: null }),
       ]);
 
-      const personalRev = ordersResponse.data?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
-      
-      let totalIn = 0;
-      let totalOut = 0;
-      
-      if (transactionsResponse.data) {
-        transactionsResponse.data.forEach(t => {
-          if (t.type === 'income') totalIn += Number(t.amount);
-          if (t.type === 'expense') totalOut += Number(t.amount);
-        });
-      }
+      const adminMetrics = adminMetricsResponse.data as AdminMetrics | null;
 
       setMetrics({
-        personalRevenue: personalRev,
-        totalIncome: totalIn,
-        totalExpense: totalOut
+        personalRevenue: Number(personalRevenueResponse.data || 0),
+        grossIncome: Number(adminMetrics?.gross_income || 0),
+        refundAmount: Number(adminMetrics?.refund_amount || 0),
+        operatingExpense: Number(adminMetrics?.operating_expense || 0),
+        netCash: Number(adminMetrics?.net_cash || 0),
       });
     };
 
@@ -137,16 +125,20 @@ export default function StaffProfilePage() {
       {profile.role === "admin" && (
         <div className="grid grid-cols-2 gap-[1px] bg-rule border border-rule mb-8">
           <div className="bg-paper p-4">
-            <div className="text-sm text-mid mb-2">Tổng thu cửa hàng</div>
-            <div className="font-mono text-xl text-green-600">+{metrics.totalIncome.toLocaleString()} đ</div>
+            <div className="text-sm text-mid mb-2">Doanh thu gộp</div>
+            <div className="font-mono text-xl text-green-600">+{metrics.grossIncome.toLocaleString()} đ</div>
           </div>
           <div className="bg-paper p-4">
-            <div className="text-sm text-mid mb-2">Tổng chi cửa hàng</div>
-            <div className="font-mono text-xl text-destructive">-{metrics.totalExpense.toLocaleString()} đ</div>
+            <div className="text-sm text-mid mb-2">Hoàn tiền</div>
+            <div className="font-mono text-xl text-destructive">-{metrics.refundAmount.toLocaleString()} đ</div>
           </div>
-          <div className="bg-paper p-4 col-span-2">
-            <div className="text-sm text-mid mb-2">Chênh lệch (Thực thu)</div>
-            <div className="font-mono text-2xl">{(metrics.totalIncome - metrics.totalExpense).toLocaleString()} đ</div>
+          <div className="bg-paper p-4">
+            <div className="text-sm text-mid mb-2">Chi vận hành</div>
+            <div className="font-mono text-xl text-destructive">-{metrics.operatingExpense.toLocaleString()} đ</div>
+          </div>
+          <div className="bg-paper p-4">
+            <div className="text-sm text-mid mb-2">Thực thu</div>
+            <div className="font-mono text-2xl">{metrics.netCash.toLocaleString()} đ</div>
           </div>
         </div>
       )}

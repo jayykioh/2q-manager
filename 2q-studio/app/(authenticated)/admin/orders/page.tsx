@@ -24,6 +24,7 @@ interface AdminOrder {
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
   const [supabase] = useState(createClient);
 
   const fetchOrders = async () => {
@@ -47,19 +48,22 @@ export default function AdminOrdersPage() {
 
   const handleCancel = async (orderId: string) => {
     const reason = prompt("Lý do hủy đơn hàng?");
-    if (!reason) return;
+    if (!reason?.trim()) return;
+
+    setCancellingOrderId(orderId);
 
     const { error } = await supabase.rpc("cancel_order", {
       p_order_id: orderId,
-      p_reason: reason
+      p_reason: reason.trim()
     });
 
     if (error) {
       toast.error("Lỗi khi hủy: " + error.message);
     } else {
       toast.success("Đã hủy đơn hàng thành công!");
-      fetchOrders();
+      await fetchOrders();
     }
+    setCancellingOrderId(null);
   };
 
   return (
@@ -81,9 +85,10 @@ export default function AdminOrdersPage() {
                 {o.status !== 'cancelled' && (
                   <button 
                     onClick={() => handleCancel(o.id)}
+                    disabled={cancellingOrderId === o.id}
                     className="text-xs border border-destructive text-destructive px-2 py-1 "
                   >
-                    Hủy Đơn
+                    {cancellingOrderId === o.id ? "Đang hủy..." : "Hủy Đơn"}
                   </button>
                 )}
               </div>

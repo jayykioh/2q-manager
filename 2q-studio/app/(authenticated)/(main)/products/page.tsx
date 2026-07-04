@@ -266,7 +266,15 @@ export default function ProductsPage() {
                       <span className="bg-amber-500 text-white text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm shadow-sm">Pending</span>
                     )}
                     {p.status !== "in_stock" && (
-                      <span className="bg-red-500 text-white text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm shadow-sm">{p.status}</span>
+                      <span className={`text-white text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm shadow-sm ${
+                        p.status === "sold" ? "bg-green-700" : "bg-amber-600"
+                      }`}>
+                        {p.status === "sold"
+                          ? "Đã bán"
+                          : p.status === "reserved"
+                            ? "Đã giữ"
+                            : p.status}
+                      </span>
                     )}
                   </div>
                   

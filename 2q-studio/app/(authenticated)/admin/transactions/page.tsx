@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { BackButton } from "@/components/BackButton";
+import Link from "next/link";
 
 interface Transaction {
   id: string;
@@ -13,6 +14,8 @@ interface Transaction {
   description: string | null;
   status: string;
   cancel_reason: string | null;
+  order_id: string | null;
+  entry_kind: "regular" | "refund";
   business_date: string;
   created_at: string;
 }
@@ -36,7 +39,7 @@ export default function AdminTransactionsPage() {
   const fetchTransactions = async () => {
     const { data } = await supabase
       .from("transactions")
-      .select("*")
+      .select("id, type, category, amount, description, status, cancel_reason, order_id, entry_kind, business_date, created_at")
       .order("created_at", { ascending: false });
     
     setTransactions((data || []) as Transaction[]);
@@ -46,7 +49,7 @@ export default function AdminTransactionsPage() {
     let active = true;
     void supabase
       .from("transactions")
-      .select("*")
+      .select("id, type, category, amount, description, status, cancel_reason, order_id, entry_kind, business_date, created_at")
       .order("created_at", { ascending: false })
       .then(({ data }) => { if (active) setTransactions((data || []) as Transaction[]); });
     return () => { active = false; };
@@ -60,22 +63,27 @@ export default function AdminTransactionsPage() {
     const description = formData.get("description") as string;
     const category = formData.get("category") as string;
 
-    const { data: { user } } = await supabase.auth.getUser();
-
-    const { error } = await supabase.from("transactions").insert({
-      store_id: "11111111-1111-1111-1111-111111111111", // Default store MVP
-      type: "expense",
-      category,
-      amount,
-      description,
-      recorded_by: user?.id,
-      status: "completed"
+    const { data, error } = await supabase.rpc("record_expense", {
+      p_store_id: "11111111-1111-1111-1111-111111111111",
+      p_category: category,
+      p_amount: amount,
+      p_description: description,
     });
 
     if (error) {
       toast.error("Lỗi: " + error.message);
     } else {
       toast.success("Đã ghi nhận chi phí!");
+      
+      // Trigger Web Push Notification asynchronously
+      if (data) {
+        fetch("/api/notifications/trigger", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transactionId: data }),
+        }).catch(console.error);
+      }
+      
       form.reset();
       setAmountInput("");
       fetchTransactions();
@@ -96,15 +104,19 @@ export default function AdminTransactionsPage() {
       return;
     }
 
-    const { error } = await supabase
-      .from("transactions")
-      .update({ status: 'cancelled', cancel_reason: cancelReason })
-      .eq('id', cancelTargetId);
+    const { error } = await supabase.rpc("cancel_transaction", {
+      p_transaction_id: cancelTargetId,
+      p_reason: cancelReason.trim(),
+    });
 
     if (error) {
       toast.error("Lỗi khi huỷ: " + error.message);
     } else {
       toast.success("Đã huỷ giao dịch!");
+      
+      // We don't necessarily need to push on cancel, but if we want:
+      // fetch("/api/notifications/trigger", { ... }).catch(console.error);
+      
       setCancelModalOpen(false);
       setCancelTargetId(null);
       fetchTransactions();
@@ -135,10 +147,18 @@ export default function AdminTransactionsPage() {
     return Array.from(months).sort().reverse();
   }, [transactions]);
 
-  // Totals calculated only on 'completed' and filtered transactions
-  const totalIncome = filteredTransactions.filter(t => t.type === 'income' && t.status !== 'cancelled').reduce((acc, t) => acc + Number(t.amount), 0);
-  const totalExpense = filteredTransactions.filter(t => t.type === 'expense' && t.status !== 'cancelled').reduce((acc, t) => acc + Number(t.amount), 0);
-  const profit = totalIncome - totalExpense;
+  const completedTransactions = filteredTransactions.filter(t => t.status === "completed");
+  const grossIncome = completedTransactions
+    .filter(t => t.type === "income")
+    .reduce((acc, t) => acc + Number(t.amount), 0);
+  const refundAmount = completedTransactions
+    .filter(t => t.entry_kind === "refund")
+    .reduce((acc, t) => acc + Number(t.amount), 0);
+  const operatingExpense = completedTransactions
+    .filter(t => t.type === "expense" && t.entry_kind === "regular")
+    .reduce((acc, t) => acc + Number(t.amount), 0);
+  const netRevenue = grossIncome - refundAmount;
+  const netCash = netRevenue - operatingExpense;
 
   return (
     <div className="p-4">
@@ -174,18 +194,23 @@ export default function AdminTransactionsPage() {
 
       <div className="flex flex-col md:flex-row gap-6 md:gap-8">
         <div className="flex-1">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-[1px] bg-rule border border-rule mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-[1px] bg-rule border border-rule mb-6">
           <div className="bg-paper p-3">
-            <div className="text-sm text-mid mb-1">Tổng Thu</div>
-            <div className="font-mono text-base md:text-lg text-green-600">+{totalIncome.toLocaleString()}đ</div>
+            <div className="text-sm text-mid mb-1">Doanh thu gộp</div>
+            <div className="font-mono text-base md:text-lg text-green-600">+{grossIncome.toLocaleString()}đ</div>
           </div>
           <div className="bg-paper p-3">
-            <div className="text-sm text-mid mb-1">Tổng Chi</div>
-            <div className="font-mono text-base md:text-lg text-destructive">-{totalExpense.toLocaleString()}đ</div>
+            <div className="text-sm text-mid mb-1">Hoàn tiền</div>
+            <div className="font-mono text-base md:text-lg text-destructive">-{refundAmount.toLocaleString()}đ</div>
           </div>
-          <div className="bg-paper p-3 col-span-2 sm:col-span-1">
-            <div className="text-sm text-mid mb-1">Lợi Nhuận</div>
-            <div className="font-mono text-base md:text-lg font-medium">{profit.toLocaleString()}đ</div>
+          <div className="bg-paper p-3">
+            <div className="text-sm text-mid mb-1">Chi vận hành</div>
+            <div className="font-mono text-base md:text-lg text-destructive">-{operatingExpense.toLocaleString()}đ</div>
+          </div>
+          <div className="bg-paper p-3">
+            <div className="text-sm text-mid mb-1">Thực thu</div>
+            <div className="font-mono text-base md:text-lg font-medium">{netCash.toLocaleString()}đ</div>
+            <div className="text-[10px] text-mid mt-1">Doanh thu thuần: {netRevenue.toLocaleString()}đ</div>
           </div>
         </div>
 
@@ -203,6 +228,7 @@ export default function AdminTransactionsPage() {
                   </div>
                   <div className="text-sm text-mid uppercase flex items-center gap-2">
                     <span>{t.category}</span>
+                    {t.entry_kind === "refund" && <span className="bg-amber-100 text-amber-800 px-1 rounded text-[10px] font-bold">HOÀN TIỀN</span>}
                     {isCancelled && <span className="bg-destructive/10 text-destructive px-1 rounded text-[10px] font-bold">ĐÃ HUỶ</span>}
                   </div>
                   <div className="text-xs text-mid">{new Date(t.created_at).toLocaleString()}</div>
@@ -214,13 +240,18 @@ export default function AdminTransactionsPage() {
                   <div className={`font-mono ${isCancelled ? 'line-through text-mid' : (t.type === 'income' ? 'text-green-600' : 'text-destructive')}`}>
                     {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString()}đ
                   </div>
-                  {!isCancelled && (
+                  {!isCancelled && !t.order_id && (
                     <button 
                       onClick={() => openCancelModal(t.id)}
                       className="text-xs text-mid hover:text-destructive underline"
                     >
                       Huỷ
                     </button>
+                  )}
+                  {t.order_id && (
+                    <Link href="/admin/orders" className="text-[10px] text-mid underline">
+                      Quản lý tại Đơn hàng
+                    </Link>
                   )}
                 </div>
               </div>
