@@ -6,9 +6,13 @@ import { toast } from "sonner";
 import { subscribeCurrentDevice } from "@/lib/push-notifications";
 
 export function NotificationBell() {
-  const [permission, setPermission] = useState<NotificationPermission>(() =>
-    typeof Notification === "undefined" ? "denied" : Notification.permission
-  );
+  const [permission, setPermission] = useState<NotificationPermission>("default");
+
+  useEffect(() => {
+    if (typeof Notification !== "undefined") {
+      setPermission(Notification.permission);
+    }
+  }, []);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

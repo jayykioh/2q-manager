@@ -16,11 +16,13 @@ const NAV_ITEMS = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const [isOffline, setIsOffline] = useState(() => typeof navigator !== "undefined" && !navigator.onLine);
+  const [isOffline, setIsOffline] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [supabase] = useState(createClient);
 
   useEffect(() => {
+    setIsOffline(typeof navigator !== "undefined" && !navigator.onLine);
+    
     function handleOnline() {
       setIsOffline(false);
     }

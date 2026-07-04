@@ -26,11 +26,18 @@ export async function subscribeCurrentDevice() {
   let created = false;
 
   if (!subscription) {
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    });
-    created = true;
+    try {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+      created = true;
+    } catch (error) {
+      console.error("Push subscribe error:", error);
+      // If we fail to subscribe due to a key mismatch or stale SW, unregister it to self-heal on next load.
+      await registration.unregister();
+      throw new Error("Lỗi đăng ký dịch vụ. Vui lòng tải lại trang (F5) và thử lại.");
+    }
   }
 
   const response = await fetch("/api/webpush/subscribe", {
