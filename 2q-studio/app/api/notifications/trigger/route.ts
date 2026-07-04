@@ -84,10 +84,10 @@ export async function POST(request: Request) {
     }
     
     // Get the most recent one to be safe
-    query = query.order("created_at", { ascending: false }).limit(1).single();
-    
-    const { data: notification, error: notificationError } = await query;
-    
+    const { data: notification, error: notificationError } = await query
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
     if (notificationError || !notification) {
       console.error("Notification not found for event", body, notificationError);
       return NextResponse.json({ error: "Notification not found" }, { status: 404 });
