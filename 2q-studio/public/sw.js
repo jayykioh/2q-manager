@@ -1,8 +1,21 @@
-const CACHE_NAME = "2q-pos-cache-v2";
-const URLS_TO_CACHE = ["/", "/login", "/manifest.webmanifest", "/favicon.ico"];
+const CACHE_NAME = "2q-pos-cache-v4";
+const URLS_TO_CACHE = ["/", "/login", "/manifest.webmanifest", "/icon.jpg"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(URLS_TO_CACHE)));
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const url of URLS_TO_CACHE) {
+        try {
+          const res = await fetch(url);
+          if (res.ok) {
+            await cache.put(url, res);
+          }
+        } catch (e) {
+          console.error("SW cache error for", url, e);
+        }
+      }
+    })
+  );
   self.skipWaiting();
 });
 
@@ -41,8 +54,8 @@ self.addEventListener("push", (event) => {
   const data = payload.data || {};
   event.waitUntil(self.registration.showNotification(payload.title || "Thông báo mới", {
     body: payload.body || "",
-    icon: payload.icon || "/favicon.ico",
-    badge: "/favicon.ico",
+    icon: payload.icon || "/icon.jpg",
+    badge: "/icon.jpg",
     tag: payload.tag || data.notification_id,
     data,
     vibrate: [100, 50, 100],

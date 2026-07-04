@@ -21,7 +21,12 @@ export async function subscribeCurrentDevice() {
     throw new Error("Thiếu cấu hình VAPID public key.");
   }
 
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await navigator.serviceWorker.register('/sw.js');
+  await navigator.serviceWorker.ready;
+  
+  if (!registration.active) {
+    throw new Error("Hệ thống đang thiết lập. Vui lòng thử lại sau vài giây.");
+  }
   let subscription = await registration.pushManager.getSubscription();
   let created = false;
 
@@ -34,9 +39,10 @@ export async function subscribeCurrentDevice() {
       created = true;
     } catch (error) {
       console.error("Push subscribe error:", error);
-      // If we fail to subscribe due to a key mismatch or stale SW, unregister it to self-heal on next load.
-      await registration.unregister();
-      throw new Error("Lỗi đăng ký dịch vụ. Vui lòng tải lại trang (F5) và thử lại.");
+      if (error instanceof Error && error.message.includes("push service error")) {
+        throw new Error("Trình duyệt của bạn đang chặn hoặc không kết nối được dịch vụ Thông báo đẩy (ví dụ: đang dùng tab Ẩn danh, hoặc trình duyệt Brave chặn Google Services). Vui lòng thử lại trên trình duyệt Chrome/Safari bình thường.");
+      }
+      throw new Error("Lỗi kết nối dịch vụ thông báo. Vui lòng thử lại sau.");
     }
   }
 
