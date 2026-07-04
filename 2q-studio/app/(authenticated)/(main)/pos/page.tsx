@@ -110,7 +110,12 @@ export default function StaffPosPage() {
     });
 
     if (error) {
-      toast.error("Checkout thất bại: " + error.message);
+      if (error.message.includes("PRODUCT_UNAVAILABLE")) {
+        toast.error("Một số sản phẩm trong giỏ không còn khả dụng (đã bán hoặc bị ẩn). Vui lòng xóa chúng khỏi giỏ hàng.");
+        fetchProducts();
+      } else {
+        toast.error("Checkout thất bại: " + error.message);
+      }
     } else {
       toast.success("Thanh toán thành công!");
       // Save snapshot for print
