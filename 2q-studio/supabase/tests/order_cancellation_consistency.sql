@@ -12,11 +12,13 @@ BEGIN
   SELECT pg_get_functiondef('public.cancel_order(uuid,text)'::regprocedure)
   INTO v_cancel_order_source;
 
-  IF position('reversal_of_transaction_id' IN v_cancel_order_source) = 0
+  IF position('reversal_of_transaction_id' IN v_cancel_order_source) > 0
      OR position('ORDER_SALE_TRANSACTION_NOT_FOUND' IN v_cancel_order_source) = 0
      OR position('FOR UPDATE' IN v_cancel_order_source) = 0
-     OR position('SET status = ''in_stock''' IN v_cancel_order_source) = 0 THEN
-    RAISE EXCEPTION 'cancel_order does not enforce the linked, locked refund workflow';
+     OR position('SET status = ''in_stock''' IN v_cancel_order_source) = 0
+     OR position('UPDATE public.transactions' IN v_cancel_order_source) = 0
+     OR position('SET status = ''cancelled''' IN v_cancel_order_source) = 0 THEN
+    RAISE EXCEPTION 'cancel_order does not cancel the original sale transaction atomically';
   END IF;
 
   SELECT string_agg(pg_get_functiondef(proc.oid), E'\n')
@@ -39,9 +41,9 @@ BEGIN
   SELECT pg_get_functiondef('public.get_financial_summary(date,date)'::regprocedure)
   INTO v_financial_summary_source;
 
-  IF position('entry_kind = ''refund''' IN v_financial_summary_source) = 0
-     OR position('entry_kind = ''regular''' IN v_financial_summary_source) = 0 THEN
-    RAISE EXCEPTION 'Financial summary does not separate internal refunds from operating expenses';
+  IF position('entry_kind' IN v_financial_summary_source) > 0
+     OR position('t.status = ''completed''' IN v_financial_summary_source) = 0 THEN
+    RAISE EXCEPTION 'Financial summary must use completed transactions without a refund ledger';
   END IF;
 
   SELECT pg_get_functiondef('public.guard_order_transaction_mutation()'::regprocedure)
@@ -55,9 +57,9 @@ BEGIN
   SELECT pg_get_functiondef('public.notify_transaction_insert()'::regprocedure)
   INTO v_notification_source;
 
-  IF position('Đơn hàng đã hủy' IN v_notification_source) = 0
-     OR position('NEW.entry_kind = ''refund''' IN v_notification_source) = 0 THEN
-    RAISE EXCEPTION 'Refund notifications are not classified as cancellations';
+  IF position('entry_kind' IN v_notification_source) > 0
+     OR position('refund' IN lower(v_notification_source)) > 0 THEN
+    RAISE EXCEPTION 'Transaction notifications still depend on the removed refund model';
   END IF;
 
   SELECT COUNT(*) INTO v_count
@@ -74,10 +76,26 @@ BEGIN
   FROM pg_indexes
   WHERE schemaname = 'public'
     AND tablename = 'transactions'
-    AND indexname IN ('uq_transactions_reversal', 'idx_transactions_reporting');
+    AND indexname = 'idx_transactions_reporting';
 
-  IF v_count <> 2 THEN
-    RAISE EXCEPTION 'Cancellation/reporting indexes are missing';
+  IF v_count <> 1 OR EXISTS (
+    SELECT 1
+    FROM pg_indexes
+    WHERE schemaname = 'public'
+      AND tablename = 'transactions'
+      AND indexname = 'uq_transactions_reversal'
+  ) THEN
+    RAISE EXCEPTION 'Reporting index is missing or reversal index still exists';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'transactions'
+      AND column_name IN ('entry_kind', 'reversal_of_transaction_id')
+  ) THEN
+    RAISE EXCEPTION 'Refund-only transaction columns still exist';
   END IF;
 
   IF EXISTS (

@@ -11,8 +11,6 @@ interface Transaction {
   category: string;
   amount: number;
   description: string | null;
-  status: string;
-  cancel_reason: string | null;
   business_date: string;
   created_at: string;
 }
@@ -55,8 +53,8 @@ export default function AdminTransactionsPage() {
   const fetchTransactions = useCallback(async () => {
     const { data } = await supabase
       .from("transactions")
-      .select("id, type, category, amount, description, status, cancel_reason, business_date, created_at")
-      .eq("entry_kind", "regular")
+      .select("id, type, category, amount, description, business_date, created_at")
+      .eq("status", "completed")
       .order("created_at", { ascending: false });
     
     setTransactions((data || []) as Transaction[]);
@@ -84,8 +82,8 @@ export default function AdminTransactionsPage() {
     let active = true;
     void supabase
       .from("transactions")
-      .select("id, type, category, amount, description, status, cancel_reason, business_date, created_at")
-      .eq("entry_kind", "regular")
+      .select("id, type, category, amount, description, business_date, created_at")
+      .eq("status", "completed")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (active) setTransactions((data || []) as Transaction[]);
@@ -216,31 +214,24 @@ export default function AdminTransactionsPage() {
           {displayedTransactions.length === 0 && (
             <div className="text-center p-4 text-mid">Không có giao dịch nào.</div>
           )}
-          {displayedTransactions.map((t) => {
-            const isCancelled = t.status === 'cancelled';
-            return (
-              <div key={t.id} className={`bg-paper border border-rule p-3 flex justify-between items-center ${isCancelled ? 'opacity-60' : ''}`}>
+          {displayedTransactions.map((t) => (
+              <div key={t.id} className="bg-paper border border-rule p-3 flex justify-between items-center">
                 <div>
-                  <div className={`font-medium ${isCancelled ? 'line-through text-mid' : ''}`}>
+                  <div className="font-medium">
                     {t.description || "Giao dịch"}
                   </div>
-                  <div className="text-sm text-mid uppercase flex items-center gap-2">
+                  <div className="text-sm text-mid uppercase">
                     <span>{t.category}</span>
-                    {isCancelled && <span className="bg-destructive/10 text-destructive px-1 rounded text-[10px] font-bold">ĐÃ HUỶ</span>}
                   </div>
                   <div className="text-xs text-mid">{new Date(t.created_at).toLocaleString()}</div>
-                  {isCancelled && t.cancel_reason && (
-                    <div className="text-xs text-destructive mt-1">Lý do: {t.cancel_reason}</div>
-                  )}
                 </div>
                 <div className="flex flex-col items-end">
-                  <div className={`font-mono ${isCancelled ? 'line-through text-mid' : (t.type === 'income' ? 'text-green-600' : 'text-destructive')}`}>
+                  <div className={`font-mono ${t.type === 'income' ? 'text-green-600' : 'text-destructive'}`}>
                     {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString()}đ
                   </div>
                 </div>
               </div>
-            );
-          })}
+          ))}
           
           {visibleCount < filteredTransactions.length && (
             <button 
