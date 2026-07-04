@@ -223,9 +223,6 @@ BEGIN
   FROM public.profiles
   WHERE role = 'admin' AND is_active = TRUE;
 
-  INSERT INTO public.notification_outbox (notification_id)
-  VALUES (v_notification_id);
-
   RETURN NEW;
 END;
 $$;
