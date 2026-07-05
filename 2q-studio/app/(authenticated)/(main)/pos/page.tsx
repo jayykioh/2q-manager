@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
+import { Product } from "@/lib/store/types";
 import { useAppData } from "@/lib/store/use-app-data";
-import { executeCheckoutOrder } from "@/lib/store/supabase-store";
+import { CartPanel } from "@/components/CartPanel";
 
 // Self-hosted inline SVG — no external dependency, works in prod & dev.
 const FALLBACK_IMAGE =
@@ -14,63 +13,99 @@ const FALLBACK_IMAGE =
 
 export default function StaffPosPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterTier, setFilterTier] = useState("all");
-  const [paymentMethod, setPaymentMethod] = useState("cash");
-  const [orderNotes, setOrderNotes] = useState("");
-  const [displayLimit, setDisplayLimit] = useState(6);
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  
+  // Pagination states
+  const PAGE_SIZE = 8;
+  const [page, setPage] = useState(0);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [supabase] = useState(createClient);
 
-  const { data, loadingProducts, cartTotal, cart, setLastOrder, refreshProducts } = useAppData();
-  const router = useRouter();
+  const { data, cart } = useAppData();
 
-  if (loadingProducts) {
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const fetchProducts = async (pageIndex: number, currentFilter: string, search: string) => {
+    if (pageIndex === 0) setIsLoadingProducts(true);
+    else setIsLoadingMore(true);
+
+    const from = pageIndex * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    
+    let query = supabase
+      .from("products")
+      .select("*, product_images(public_url, is_primary, sort_order)", { count: "exact" })
+      .eq("status", "in_stock")
+      .eq("approval_status", "approved")
+      .order("created_at", { ascending: false });
+
+    if (currentFilter !== "all") {
+      query = query.eq("tier", currentFilter);
+    }
+    
+    if (search.trim() !== "") {
+      // Basic ilike search on name or sku
+      query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
+    }
+    
+    const { data: fetchResult, count } = await query.range(from, to);
+    
+    if (fetchResult) {
+      if (pageIndex === 0) {
+        setProducts(fetchResult as Product[]);
+      } else {
+        setProducts((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newProducts = (fetchResult as Product[]).filter((p) => !existingIds.has(p.id));
+          return [...prev, ...newProducts];
+        });
+      }
+      setHasMore(count !== null && from + PAGE_SIZE < count);
+    }
+    if (pageIndex === 0) setIsLoadingProducts(false);
+    else setIsLoadingMore(false);
+  };
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      if (active) {
+        setPage(0);
+        await fetchProducts(0, filterTier, debouncedSearch);
+      }
+    };
+    load();
+    return () => { active = false; };
+  }, [filterTier, debouncedSearch, supabase]);
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      setPage(0);
+      fetchProducts(0, filterTier, debouncedSearch);
+    };
+    window.addEventListener("2q-refresh-products", handleRefresh);
+    return () => window.removeEventListener("2q-refresh-products", handleRefresh);
+  }, [filterTier, debouncedSearch]);
+
+  if (isLoadingProducts && products.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-mid animate-pulse">Khởi tạo POS...</div>
+        <div className="text-mid animate-pulse">Đang tải sản phẩm...</div>
       </div>
     );
   }
 
-  const handleCheckout = async () => {
-    if (data.cart.length === 0) return;
-    
-    setIsCheckingOut(true);
-    // Execute side-effect through the Supabase Storage Adapter
-    const result = await executeCheckoutOrder(data, paymentMethod, orderNotes);
-    setIsCheckingOut(false);
 
-    if (!result.success) {
-      if (result.error?.includes("PRODUCT_UNAVAILABLE")) {
-        toast.error("Một số sản phẩm trong giỏ không còn khả dụng (đã bán hoặc bị ẩn). Vui lòng xóa chúng khỏi giỏ hàng.");
-        refreshProducts();
-      } else {
-        toast.error("Checkout thất bại: " + result.error);
-      }
-    } else {
-
-      // Save snapshot for print
-      setLastOrder({
-        id: result.orderId!,
-        items: [...data.cart],
-        total: cartTotal,
-        date: new Date().toLocaleString(),
-        paymentMethod: paymentMethod,
-        notes: orderNotes,
-      });
-      
-      cart.clearCart();
-      setOrderNotes("");
-      refreshProducts(); // Because inventory changed
-    }
-  };
-
-  const filteredProducts = data.products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTier = filterTier === "all" || p.tier === filterTier;
-    return matchesSearch && matchesTier;
-  });
-
-  const displayedProducts = filteredProducts.slice(0, displayLimit);
 
   return (
     <div className="p-4 flex flex-col h-full lg:flex-row gap-4 print:hidden">
@@ -100,7 +135,7 @@ export default function StaffPosPage() {
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[1px] bg-rule border border-rule">
-          {displayedProducts.map((p) => {
+          {products.map((p) => {
             const inCart = data.cart.some((i) => i.product_id === p.id);
             const images = p.product_images || [];
             const primaryImage = images.find((img) => img.is_primary) || images[0];
@@ -157,103 +192,31 @@ export default function StaffPosPage() {
         </div>
 
         {/* Show More Button */}
-        {displayLimit < filteredProducts.length && (
+        {hasMore && (
           <div className="mt-8 mb-8 text-center">
             <button
-              onClick={() => setDisplayLimit(prev => prev + 6)}
-              className="px-6 py-2 border border-rule hover:bg-surface transition-colors font-medium text-sm rounded-sm"
+              onClick={() => {
+                const nextPage = page + 1;
+                setPage(nextPage);
+                fetchProducts(nextPage, filterTier, debouncedSearch);
+              }}
+              disabled={isLoadingMore}
+              className="px-6 py-2 border border-rule hover:bg-surface transition-colors font-medium text-sm rounded-sm disabled:opacity-50"
             >
-              Xem thêm ({filteredProducts.length - displayLimit})
+              {isLoadingMore ? "Đang tải..." : "Xem thêm"}
             </button>
+          </div>
+        )}
+        
+        {!isLoadingProducts && products.length === 0 && (
+          <div className="text-mid p-8 border border-rule text-center bg-surface mt-4">
+            Không tìm thấy sản phẩm nào
           </div>
         )}
       </div>
 
       {/* Cart Panel */}
-      <div className="w-full lg:w-96 bg-surface border border-rule p-4 flex flex-col">
-        <h2 className="font-sans text-xl font-medium mb-4">Giỏ hàng</h2>
-        <div className="flex-1 overflow-auto flex flex-col gap-2">
-          {data.cart.map((item) => (
-            <div key={item.product_id} className="bg-paper p-3 border border-rule flex justify-between items-center">
-              <div>
-                <div className="font-display">{item.sku}</div>
-                <input
-                  type="number"
-                  value={item.sale_price}
-                  onChange={(e) => cart.updateSalePrice(item.product_id, Number(e.target.value))}
-                  className="font-mono text-sm border border-rule px-1 mt-1 w-24 bg-paper"
-                />
-              </div>
-              <button onClick={() => cart.removeItem(item.product_id)} className="text-destructive p-2 hover:bg-red-50 transition-colors">
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ))}
-          {data.cart.length === 0 && (
-            <div className="text-mid text-center py-8 text-sm">Giỏ hàng trống</div>
-          )}
-        </div>
-        <div className="mt-4 pt-4 border-t border-rule">
-          <div className="mb-4">
-            <div className="text-sm font-medium mb-2">Phương thức thanh toán</div>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => setPaymentMethod("cash")}
-                className={`py-2 text-sm border ${paymentMethod === "cash" ? "bg-ink text-paper border-ink" : "bg-paper text-ink hover:bg-surface border-rule"} rounded-sm transition-colors`}
-              >
-                Tiền mặt
-              </button>
-              <button
-                onClick={() => setPaymentMethod("transfer")}
-                className={`py-2 text-sm border ${paymentMethod === "transfer" ? "bg-ink text-paper border-ink" : "bg-paper text-ink hover:bg-surface border-rule"} rounded-sm transition-colors`}
-              >
-                CK
-              </button>
-              <button
-                onClick={() => setPaymentMethod("card")}
-                className={`py-2 text-sm border ${paymentMethod === "card" ? "bg-ink text-paper border-ink" : "bg-paper text-ink hover:bg-surface border-rule"} rounded-sm transition-colors`}
-              >
-                Quẹt thẻ
-              </button>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <div className="text-sm font-medium mb-2">Ghi chú đơn hàng</div>
-            <textarea
-              value={orderNotes}
-              onChange={(e) => setOrderNotes(e.target.value)}
-              placeholder="Khách cần ghi chú thêm..."
-              className="w-full border border-rule bg-paper p-2 text-sm min-h-[60px] resize-none"
-            />
-          </div>
-
-          <div className="flex justify-between font-mono text-lg mb-4">
-            <span>Tổng:</span>
-            <span>{cartTotal.toLocaleString()}đ</span>
-          </div>
-          <button
-            onClick={handleCheckout}
-            disabled={data.cart.length === 0 || isCheckingOut}
-            className="w-full bg-ink text-paper py-3 font-medium uppercase tracking-wider disabled:opacity-50"
-          >
-            {isCheckingOut ? "Đang xử lý..." : "Thanh toán"}
-          </button>
-          {data.lastOrder && (
-            <div className="mt-4 flex flex-col gap-2">
-              <div className="text-center text-success font-medium text-sm">
-                Thanh toán thành công!
-              </div>
-              <button
-                onClick={() => router.push(`/pos/bill/${data.lastOrder!.id}`)}
-                className="w-full bg-paper text-ink border border-ink py-3 font-medium uppercase tracking-wider hover:bg-surface transition-colors"
-              >
-                Xem Bill (Đơn {data.lastOrder.id.slice(0, 8)})
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      <CartPanel />
     </div>
   );
 }

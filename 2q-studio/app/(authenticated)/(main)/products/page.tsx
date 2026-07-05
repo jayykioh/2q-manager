@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { BackButton } from "@/components/BackButton";
+import { ProductPreviewModal } from "@/components/ProductPreviewModal";
 
 const ProductForm = dynamic(() => import("@/components/ProductForm").then((mod) => mod.ProductForm), {
   loading: () => <div className="p-8 border border-rule bg-surface animate-pulse h-[400px]"></div>,
@@ -43,41 +44,66 @@ export default function ProductsPage() {
   const [deleteModalProductId, setDeleteModalProductId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userRole, setUserRole] = useState<string>("staff");
-  const [displayLimit, setDisplayLimit] = useState(8);
+  
+  // Pagination states
+  const PAGE_SIZE = 8;
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // States for Image Preview Carousel
   const [previewImages, setPreviewImages] = useState<string[] | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number>(0);
   const [supabase] = useState(createClient);
 
-  const fetchProducts = async () => {
-    const { data } = await supabase
+  const fetchProducts = async (pageIndex: number, currentFilter: string) => {
+    setIsLoadingMore(true);
+    const from = pageIndex * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    
+    let query = supabase
       .from("products")
-      .select("*, product_images(public_url, is_primary, sort_order)")
+      .select("*, product_images(public_url, is_primary, sort_order)", { count: "exact" })
       .neq("status", "archived")
       .order("created_at", { ascending: false });
-    setProducts((data || []) as Product[]);
+
+    if (currentFilter !== "all") {
+      query = query.eq("tier", currentFilter);
+    }
+    
+    const { data, count } = await query.range(from, to);
+    
+    if (data) {
+      if (pageIndex === 0) {
+        setProducts(data as Product[]);
+      } else {
+        setProducts((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newProducts = (data as Product[]).filter((p) => !existingIds.has(p.id));
+          return [...prev, ...newProducts];
+        });
+      }
+      setHasMore(count !== null && from + PAGE_SIZE < count);
+    }
+    setIsLoadingMore(false);
   };
 
   useEffect(() => {
     let active = true;
-    const loadPage = async () => {
+    const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
         if (active && data) setUserRole(data.role);
       }
-
-      const { data: productRows } = await supabase
-        .from("products")
-        .select("*, product_images(public_url, is_primary, sort_order)")
-        .neq("status", "archived")
-        .order("created_at", { ascending: false });
-      if (active) setProducts((productRows || []) as Product[]);
+      if (active) {
+        setPage(0);
+        await fetchProducts(0, filterTier);
+      }
     };
-    void loadPage();
+    init();
     return () => { active = false; };
-  }, [supabase]);
+  }, [supabase, filterTier]);
 
   const handleApprove = async (id: string, status: string) => {
     const { error } = await supabase.from("products").update({ approval_status: status }).eq("id", id);
@@ -170,7 +196,8 @@ export default function ProductsPage() {
       setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, name, type, tier, base_price, note: note || null } : p));
       setEditingProduct(null);
       // Fetch in background to update images if needed
-      fetchProducts();
+      fetchProducts(0, filterTier);
+      setPage(0);
     } catch (err: unknown) {
       toast.error("Lỗi khi lưu: " + (err instanceof Error ? err.message : "Không xác định"));
     } finally {
@@ -192,21 +219,8 @@ export default function ProductsPage() {
     }
   };
 
-  const nextImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (previewImages) {
-      setPreviewIndex((prev) => (prev + 1) % previewImages.length);
-    }
-  };
-
-  const prevImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (previewImages) {
-      setPreviewIndex((prev) => (prev - 1 + previewImages.length) % previewImages.length);
-    }
-  };
-
-  const filteredProducts = products.filter(p => filterTier === "all" || p.tier === filterTier);
+  // No longer needed as we filter on the server
+  // const filteredProducts = products.filter(p => filterTier === "all" || p.tier === filterTier);
 
   return (
     <div className="p-4 flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto items-start pb-20">
@@ -219,15 +233,15 @@ export default function ProductsPage() {
             <h2 className="font-sans text-2xl font-bold uppercase tracking-wide">Kho hàng</h2>
           </div>
           <div className="flex gap-2 flex-wrap text-sm font-medium">
-             <button onClick={() => { setFilterTier("all"); setDisplayLimit(8); }} className={`px-3 py-1 border transition-colors ${filterTier === "all" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Tất cả</button>
-             <button onClick={() => { setFilterTier("standard"); setDisplayLimit(8); }} className={`px-3 py-1 border transition-colors ${filterTier === "standard" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Thường</button>
-             <button onClick={() => { setFilterTier("premium"); setDisplayLimit(8); }} className={`px-3 py-1 border transition-colors ${filterTier === "premium" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Xịn</button>
-             <button onClick={() => { setFilterTier("done"); setDisplayLimit(8); }} className={`px-3 py-1 border transition-colors ${filterTier === "done" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Hoàn thành</button>
+             <button onClick={() => setFilterTier("all")} className={`px-3 py-1 border transition-colors ${filterTier === "all" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Tất cả</button>
+             <button onClick={() => setFilterTier("standard")} className={`px-3 py-1 border transition-colors ${filterTier === "standard" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Thường</button>
+             <button onClick={() => setFilterTier("premium")} className={`px-3 py-1 border transition-colors ${filterTier === "premium" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Xịn</button>
+             <button onClick={() => setFilterTier("done")} className={`px-3 py-1 border transition-colors ${filterTier === "done" ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-rule hover:bg-surface"}`}>Hoàn thành</button>
           </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.slice(0, displayLimit).map((p) => {
+          {products.map((p) => {
             // Get the primary image, or the first image, or fallback
             const images = p.product_images || [];
             const primaryImage = images.find((img) => img.is_primary) || images[0];
@@ -326,18 +340,23 @@ export default function ProductsPage() {
         </div>
 
         {/* Show More Button */}
-        {displayLimit < filteredProducts.length && (
+        {hasMore && (
           <div className="mt-8 text-center">
             <button
-              onClick={() => setDisplayLimit(prev => prev + 8)}
-              className="px-6 py-2 border border-rule hover:bg-surface transition-colors font-medium text-sm rounded-sm"
+              onClick={() => {
+                const nextPage = page + 1;
+                setPage(nextPage);
+                fetchProducts(nextPage, filterTier);
+              }}
+              disabled={isLoadingMore}
+              className="px-6 py-2 border border-rule hover:bg-surface transition-colors font-medium text-sm rounded-sm disabled:opacity-50"
             >
-              Xem thêm ({filteredProducts.length - displayLimit} sản phẩm)
+              {isLoadingMore ? "Đang tải..." : "Xem thêm"}
             </button>
           </div>
         )}
 
-        {products.length === 0 && (
+        {!isLoadingMore && products.length === 0 && (
           <div className="text-mid p-8 border border-rule text-center bg-surface">
             Chưa có sản phẩm nào
           </div>
@@ -347,7 +366,7 @@ export default function ProductsPage() {
       {/* Product Form Section */}
       <div className="w-full lg:w-[400px] shrink-0">
         <div className="sticky top-4">
-          <ProductForm onSuccess={fetchProducts} defaultStoreId="11111111-1111-1111-1111-111111111111" />
+          <ProductForm onSuccess={() => { setPage(0); fetchProducts(0, filterTier); }} defaultStoreId="11111111-1111-1111-1111-111111111111" />
         </div>
       </div>
 
@@ -451,61 +470,13 @@ export default function ProductsPage() {
 
       {/* Image Preview / Carousel Modal */}
       {previewImages && (
-        <div 
-          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center backdrop-blur-sm p-4"
-          onClick={() => setPreviewImages(null)}
-        >
-          <button 
-            className="absolute top-4 right-4 p-2 text-white/70 hover:text-white bg-black/20 rounded-full transition-colors"
-            onClick={(e) => { e.stopPropagation(); setPreviewImages(null); }}
-          >
-            <X size={24} />
-          </button>
-
-          <div className="relative w-full max-w-4xl max-h-[80vh] flex items-center justify-center">
-            {previewImages.length > 1 && (
-              <button 
-                onClick={prevImage}
-                className="absolute left-2 md:-left-12 p-2 bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors z-10"
-              >
-                <ChevronLeft size={32} />
-              </button>
-            )}
-
-            <div 
-              className="relative w-full aspect-square md:aspect-auto md:h-[80vh] flex items-center justify-center"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img 
-                src={previewImages[previewIndex]} 
-                alt="Product preview" 
-                className="max-w-full max-h-full object-contain"
-              />
-            </div>
-
-            {previewImages.length > 1 && (
-              <button 
-                onClick={nextImage}
-                className="absolute right-2 md:-right-12 p-2 bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors z-10"
-              >
-                <ChevronRight size={32} />
-              </button>
-            )}
-          </div>
-
-          {/* Dots Indicator */}
-          {previewImages.length > 1 && (
-            <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-2" onClick={e => e.stopPropagation()}>
-              {previewImages.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPreviewIndex(i)}
-                  className={`w-2.5 h-2.5 rounded-full transition-colors ${i === previewIndex ? 'bg-white' : 'bg-white/30 hover:bg-white/50'}`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        <ProductPreviewModal
+          images={previewImages}
+          initialIndex={0}
+          currentIndex={previewIndex}
+          onIndexChange={setPreviewIndex}
+          onClose={() => setPreviewImages(null)}
+        />
       )}
     </div>
   );
