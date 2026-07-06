@@ -10,18 +10,6 @@ import { toast } from "sonner";
 // In production this env var MUST be set in Vercel → Project → Environment Variables.
 if (typeof window !== "undefined" && !process.env.NEXT_PUBLIC_R2_PUBLIC_URL) {
   console.error(
-"use client";
-
-import { useState } from "react";
-import imageCompression from "browser-image-compression";
-import { Loader2, Upload, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
-
-// Guard: alert developers early if the R2 public URL env var is missing.
-// In production this env var MUST be set in Vercel → Project → Environment Variables.
-if (typeof window !== "undefined" && !process.env.NEXT_PUBLIC_R2_PUBLIC_URL) {
-  console.error(
     "[2Q] NEXT_PUBLIC_R2_PUBLIC_URL is not set. " +
     "Images uploaded in this session will have a null public_url in the database. " +
     "Add it to Vercel Environment Variables and redeploy."
@@ -169,6 +157,49 @@ export function ProductForm({ onSuccess, defaultStoreId, stores }: ProductFormPr
       onSuccess?.();
     } catch (err: unknown) {
       toast.error("Lỗi: " + (err instanceof Error ? err.message : "Không xác định"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium mb-1">Tên sản phẩm</label>
+        <input
+          required
+          name="name"
+          type="text"
+          placeholder="Nhập tên sản phẩm"
+          className="w-full border border-rule p-2"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">SKU (để trống để tự tạo)</label>
+        <input
+          name="sku"
+          type="text"
+          placeholder="VD: 2Q-BR-123456#"
+          className="w-full border border-rule p-2 font-mono"
+        />
+      </div>
+
+      {stores && stores.length > 1 && (
+        <div>
+          <label className="block text-sm font-medium mb-1">Cửa hàng</label>
+          <select name="store_id" className="w-full border border-rule p-2 bg-paper">
+            {stores.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Loại</label>
+          <select name="type" className="w-full border border-rule p-2 bg-paper">
             <option value="bracelet">Vòng tay</option>
             <option value="ring">Nhẫn</option>
             <option value="earring">Hoa tai</option>
@@ -236,7 +267,7 @@ export function ProductForm({ onSuccess, defaultStoreId, stores }: ProductFormPr
                 className="object-cover w-full h-full"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
               />
-              <button type="button" onClick={() => removeImage(i)} className="absolute -top-2 -right-2 bg-destructive text-paper  p-1">
+              <button type="button" onClick={() => removeImage(i)} className="absolute -top-2 -right-2 bg-destructive text-paper p-1">
                 <X size={12} />
               </button>
             </div>
@@ -248,7 +279,7 @@ export function ProductForm({ onSuccess, defaultStoreId, stores }: ProductFormPr
         </div>
       </div>
 
-      <button disabled={loading} type="submit" className="w-full bg-ink text-paper py-3 font-medium  flex items-center justify-center disabled:opacity-50">
+      <button disabled={loading} type="submit" className="w-full bg-ink text-paper py-3 font-medium flex items-center justify-center disabled:opacity-50">
         {loading ? <Loader2 className="animate-spin" /> : "Lưu Sản Phẩm"}
       </button>
     </form>
