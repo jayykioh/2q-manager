@@ -65,7 +65,7 @@ export default function ProductsPage() {
       .from("products")
       .select("*, product_images(public_url, is_primary, sort_order)", { count: "exact" })
       .neq("status", "archived")
-      .order("created_at", { ascending: false });
+      .order("updated_at", { ascending: false });
 
     if (currentFilter !== "all") {
       query = query.eq("tier", currentFilter);
