@@ -32,6 +32,7 @@ interface Product {
   tier: string;
   status: string;
   approval_status: string;
+  current_store_id: string;
   base_price: number;
   note?: string | null;
   product_images: ProductImage[];
@@ -44,6 +45,7 @@ export default function ProductsPage() {
   const [deleteModalProductId, setDeleteModalProductId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userRole, setUserRole] = useState<string>("staff");
+  const [stores, setStores] = useState<{id: string, name: string}[]>([]);
   
   // Pagination states
   const PAGE_SIZE = 8;
@@ -97,6 +99,9 @@ export default function ProductsPage() {
         if (active && data) setUserRole(data.role);
       }
       if (active) {
+        const { data: storesData } = await supabase.from("stores").select("id, name").order("name");
+        if (storesData) setStores(storesData);
+        
         setPage(0);
         await fetchProducts(0, filterTier);
       }
@@ -144,6 +149,7 @@ export default function ProductsPage() {
     const tier = formData.get("tier") as string;
     const base_price = Number(formData.get("basePrice"));
     const note = formData.get("note") as string;
+    const store_id = formData.get("store_id") as string;
     const newImage = formData.get("newImage") as File | null;
 
     try {
@@ -187,13 +193,13 @@ export default function ProductsPage() {
 
       // 2. Update product info
       const { error } = await supabase.from("products").update({
-        name, type, tier, base_price, note: note || null
+        name, type, tier, base_price, note: note || null, current_store_id: store_id
       }).eq("id", editingProduct.id);
 
       if (error) throw error;
 
       toast.success("Đã cập nhật sản phẩm!");
-      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, name, type, tier, base_price, note: note || null } : p));
+      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, name, type, tier, base_price, note: note || null, current_store_id: store_id } : p));
       setEditingProduct(null);
       // Fetch in background to update images if needed
       fetchProducts(0, filterTier);
@@ -366,7 +372,7 @@ export default function ProductsPage() {
       {/* Product Form Section */}
       <div className="w-full lg:w-[400px] shrink-0">
         <div className="sticky top-4">
-          <ProductForm onSuccess={() => { setPage(0); fetchProducts(0, filterTier); }} defaultStoreId="11111111-1111-1111-1111-111111111111" />
+          <ProductForm onSuccess={() => { setPage(0); fetchProducts(0, filterTier); }} defaultStoreId="11111111-1111-1111-1111-111111111111" stores={stores} />
         </div>
       </div>
 
@@ -390,9 +396,17 @@ export default function ProductsPage() {
                 <input disabled value={editingProduct.sku} className="w-full border border-rule p-2 bg-surface text-mid" />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Tên sản phẩm</label>
-                <input required name="name" defaultValue={editingProduct.name} className="w-full border border-rule p-2" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Cơ sở</label>
+                  <select name="store_id" defaultValue={editingProduct.current_store_id} className="w-full border border-rule p-2 bg-paper">
+                    {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Tên sản phẩm</label>
+                  <input required name="name" defaultValue={editingProduct.name} className="w-full border border-rule p-2" />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

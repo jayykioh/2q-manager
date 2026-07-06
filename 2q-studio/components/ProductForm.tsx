@@ -10,6 +10,18 @@ import { toast } from "sonner";
 // In production this env var MUST be set in Vercel → Project → Environment Variables.
 if (typeof window !== "undefined" && !process.env.NEXT_PUBLIC_R2_PUBLIC_URL) {
   console.error(
+"use client";
+
+import { useState } from "react";
+import imageCompression from "browser-image-compression";
+import { Loader2, Upload, X } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+
+// Guard: alert developers early if the R2 public URL env var is missing.
+// In production this env var MUST be set in Vercel → Project → Environment Variables.
+if (typeof window !== "undefined" && !process.env.NEXT_PUBLIC_R2_PUBLIC_URL) {
+  console.error(
     "[2Q] NEXT_PUBLIC_R2_PUBLIC_URL is not set. " +
     "Images uploaded in this session will have a null public_url in the database. " +
     "Add it to Vercel Environment Variables and redeploy."
@@ -19,9 +31,10 @@ if (typeof window !== "undefined" && !process.env.NEXT_PUBLIC_R2_PUBLIC_URL) {
 interface ProductFormProps {
   onSuccess?: () => void;
   defaultStoreId: string;
+  stores?: {id: string, name: string}[];
 }
 
-export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
+export function ProductForm({ onSuccess, defaultStoreId, stores }: ProductFormProps) {
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<File[]>([]);
   const [price, setPrice] = useState<string>("500000");
@@ -72,6 +85,7 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
       const tier = formData.get("tier") as string;
       const basePrice = Number(formData.get("basePrice"));
       const note = formData.get("note") as string;
+      const storeId = formData.get("store_id") as string || defaultStoreId;
 
       // 1. Upload Images to R2
       const uploadedImages = [];
@@ -139,7 +153,7 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
         p_name: name,
         p_type: type,
         p_tier: tier,
-        p_store_id: defaultStoreId,
+        p_store_id: storeId,
         p_base_price: basePrice,
         p_length_mm: null,
         p_weight_g: null,
@@ -155,30 +169,6 @@ export function ProductForm({ onSuccess, defaultStoreId }: ProductFormProps) {
       onSuccess?.();
     } catch (err: unknown) {
       toast.error("Lỗi: " + (err instanceof Error ? err.message : "Không xác định"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-lg bg-paper p-4 border border-rule w-full">
-      <h2 className="font-sans font-bold text-xl uppercase tracking-wide mb-4">Thêm sản phẩm mới</h2>
-      
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Mã SP (SKU)</label>
-          <input name="sku" placeholder="Tự động tạo nếu trống" className="w-full border border-rule p-2 font-mono text-sm" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Tên sản phẩm</label>
-          <input required name="name" className="w-full border border-rule p-2" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Loại</label>
-          <select name="type" className="w-full border border-rule p-2 bg-paper">
             <option value="bracelet">Vòng tay</option>
             <option value="ring">Nhẫn</option>
             <option value="earring">Hoa tai</option>
