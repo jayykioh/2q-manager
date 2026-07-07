@@ -5,6 +5,12 @@ import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { Users, Package, FileText, Settings, Wallet } from "lucide-react";
 
+interface FinancialSummary {
+  revenue: number;
+  operating_expense: number;
+  difference: number;
+}
+
 interface AdminDashboardMetrics {
   revenue: number;
   operating_expense: number;
@@ -25,19 +31,30 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     const fetchMetrics = async () => {
-      const { data, error } = await supabase
-        .rpc("get_admin_dashboard_metrics")
-        .single();
+      // get_admin_dashboard_metrics only returns today's data for revenue.
+      // Use get_financial_summary with no date filter for all-time totals,
+      // and get_admin_dashboard_metrics only for orders/products counts.
+      const [summaryResult, todayResult] = await Promise.all([
+        supabase
+          .rpc("get_financial_summary", {
+            p_start_date: null,
+            p_end_date: null,
+          })
+          .single(),
+        supabase
+          .rpc("get_admin_dashboard_metrics")
+          .single(),
+      ]);
 
-      if (error || !data) return;
-      const dashboardMetrics = data as AdminDashboardMetrics;
+      const summary = summaryResult.data as FinancialSummary | null;
+      const today = todayResult.data as AdminDashboardMetrics | null;
 
       setMetrics({
-        revenue: Number(dashboardMetrics.revenue || 0),
-        operatingExpense: Number(dashboardMetrics.operating_expense || 0),
-        difference: Number(dashboardMetrics.difference || 0),
-        totalOrders: Number(dashboardMetrics.total_orders || 0),
-        activeProducts: Number(dashboardMetrics.active_products || 0),
+        revenue: Number(summary?.revenue || 0),
+        operatingExpense: Number(summary?.operating_expense || 0),
+        difference: Number(summary?.difference || 0),
+        totalOrders: Number(today?.total_orders || 0),
+        activeProducts: Number(today?.active_products || 0),
       });
     };
 
@@ -48,16 +65,16 @@ export default function AdminDashboardPage() {
       <h2 className="font-sans text-xl font-medium mb-6">Tổng quan Kinh doanh</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-[1px] bg-rule border border-rule">
+        <Link href="/admin/transactions" className="bg-paper p-4 block hover:bg-surface transition-colors group">
+          <div className="text-sm text-mid mb-2 group-hover:text-ink transition-colors">Tổng Doanh Thu ↗</div>
+          <div className="font-mono text-2xl text-green-600">{metrics.revenue.toLocaleString()}đ</div>
+        </Link>
         <div className="bg-paper p-4">
-          <div className="text-sm text-mid mb-2">Doanh thu hôm nay</div>
-          <div className="font-mono text-2xl">{metrics.revenue.toLocaleString()}đ</div>
+          <div className="text-sm text-mid mb-2">Chi Tiêu</div>
+          <div className="font-mono text-2xl text-destructive">{metrics.operatingExpense.toLocaleString()}đ</div>
         </div>
         <div className="bg-paper p-4">
-          <div className="text-sm text-mid mb-2">Chi vận hành hôm nay</div>
-          <div className="font-mono text-2xl">{metrics.operatingExpense.toLocaleString()}đ</div>
-        </div>
-        <div className="bg-paper p-4">
-          <div className="text-sm text-mid mb-2">Chênh lệch hôm nay</div>
+          <div className="text-sm text-mid mb-2">Chênh Lệch</div>
           <div className="font-mono text-2xl">{metrics.difference.toLocaleString()}đ</div>
         </div>
       </div>
