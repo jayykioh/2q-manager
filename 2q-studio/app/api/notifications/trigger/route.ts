@@ -79,19 +79,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Notification not found" }, { status: 404 });
     }
 
-    // 4. Fetch all active push subscriptions for admins
-    // First, find admin user IDs
-    const { data: adminProfiles } = await supabaseAdmin
+    // 4. Fetch all active push subscriptions for users
+    // First, find active user IDs
+    const { data: activeProfiles } = await supabaseAdmin
       .from("profiles")
       .select("id")
-      .eq("role", "admin")
       .eq("is_active", true);
       
-    if (!adminProfiles || adminProfiles.length === 0) {
-      return NextResponse.json({ success: true, message: "No admins to notify" });
+    if (!activeProfiles || activeProfiles.length === 0) {
+      return NextResponse.json({ success: true, message: "No active users to notify" });
     }
     
-    const adminIds = adminProfiles.map((p) => p.id);
+    const adminIds = activeProfiles.map((p) => p.id);
 
     // Get their subscriptions
     const { data: subscriptions, error: subError } = await supabaseAdmin

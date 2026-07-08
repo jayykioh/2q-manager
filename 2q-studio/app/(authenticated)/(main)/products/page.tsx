@@ -192,14 +192,21 @@ export default function ProductsPage() {
       }
 
       // 2. Update product info
-      const { error } = await supabase.from("products").update({
+      // If staff edits a product, revert approval_status to pending so admin can re-review
+      const updateData: Record<string, unknown> = {
         name, type, tier, base_price, note: note || null, current_store_id: store_id
-      }).eq("id", editingProduct.id);
+      };
+      if (userRole === "staff") {
+        updateData.approval_status = "pending";
+      }
+
+      const { error } = await supabase.from("products").update(updateData).eq("id", editingProduct.id);
 
       if (error) throw error;
 
-      toast.success("Đã cập nhật sản phẩm!");
-      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, name, type, tier, base_price, note: note || null, current_store_id: store_id } : p));
+      toast.success("Đã cập nhật sản phẩm!" + (userRole === "staff" ? " Sản phẩm sẽ chờ admin duyệt lại." : ""));
+      const newApprovalStatus = userRole === "staff" ? "pending" : editingProduct.approval_status;
+      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, name, type, tier, base_price, note: note || null, current_store_id: store_id, approval_status: newApprovalStatus } : p));
       setEditingProduct(null);
       // Fetch in background to update images if needed
       fetchProducts(0, filterTier);
@@ -299,7 +306,8 @@ export default function ProductsPage() {
                   </div>
                   
                   {/* Action Buttons overlay: always visible on mobile, hover on large screens */}
-                  {userRole === "admin" && (
+                  {/* Edit: visible for both admin and staff | Delete: admin only */}
+                  {(userRole === "admin" || userRole === "staff") && (
                     <div className="absolute top-2 right-2 flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                       <button 
                         onClick={(e) => { e.stopPropagation(); setEditingProduct(p); }}
@@ -308,13 +316,15 @@ export default function ProductsPage() {
                       >
                         <Edit2 size={14} />
                       </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleDeleteProduct(p.id); }}
-                        className="p-1.5 bg-paper/90 backdrop-blur-sm shadow-sm border border-rule rounded-sm hover:bg-destructive hover:text-white text-destructive transition-colors"
-                        title="Xóa"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {userRole === "admin" && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteProduct(p.id); }}
+                          className="p-1.5 bg-paper/90 backdrop-blur-sm shadow-sm border border-rule rounded-sm hover:bg-destructive hover:text-white text-destructive transition-colors"
+                          title="Xóa"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

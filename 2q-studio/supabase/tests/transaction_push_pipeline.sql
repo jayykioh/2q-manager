@@ -19,10 +19,9 @@ BEGIN
   SELECT pg_get_functiondef('public.notify_transaction_insert()'::regprocedure)
   INTO v_trigger_source;
 
-  IF position('notification_outbox' IN v_trigger_source) = 0
-     OR position('notification_recipients' IN v_trigger_source) = 0
+  IF position('notification_recipients' IN v_trigger_source) = 0
      OR position('is_active = TRUE' IN v_trigger_source) = 0 THEN
-    RAISE EXCEPTION 'Transaction trigger does not atomically create active-admin recipients and an outbox job';
+    RAISE EXCEPTION 'Transaction trigger does not atomically create active recipients';
   END IF;
 
   IF position('NEW.order_id IS NULL' IN v_trigger_source) > 0 THEN
@@ -39,7 +38,6 @@ BEGIN
     RAISE EXCEPTION 'checkout_order must not create notifications directly';
   END IF;
 
-  PERFORM 'public.claim_notification_outbox(integer)'::regprocedure;
 END;
 $$;
 
