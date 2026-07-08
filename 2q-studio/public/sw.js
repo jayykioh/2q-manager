@@ -1,5 +1,5 @@
-const CACHE_NAME = "2q-pos-cache-v4";
-const URLS_TO_CACHE = ["/", "/login", "/manifest.webmanifest", "/icon.jpg"];
+const CACHE_NAME = "2q-pos-cache-v5";
+const URLS_TO_CACHE = ["/", "/login", "/offline", "/manifest.webmanifest", "/icon.jpg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -35,7 +35,15 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(event.request).catch(async () => {
       const response = await caches.match(event.request);
-      return response || new Response("Network error and no cache available", {
+      if (response) return response;
+
+      // Fallback for page navigation requests when offline
+      if (event.request.mode === "navigate") {
+        const offlineResponse = await caches.match("/offline");
+        if (offlineResponse) return offlineResponse;
+      }
+
+      return new Response("Network error and no cache available", {
         status: 503,
         statusText: "Service Unavailable",
       });
