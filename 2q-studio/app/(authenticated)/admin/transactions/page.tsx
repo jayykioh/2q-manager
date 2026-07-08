@@ -15,6 +15,7 @@ interface Transaction {
   description: string | null;
   business_date: string;
   created_at: string;
+  profiles?: { full_name: string } | null;
 }
 
 interface FinancialSummary {
@@ -272,7 +273,7 @@ export default function AdminTransactionsPage() {
   const fetchTransactions = useCallback(async () => {
     const { data } = await supabase
       .from("transactions")
-      .select("id, type, category, amount, description, business_date, created_at")
+      .select("id, type, category, amount, description, business_date, created_at, profiles!transactions_recorded_by_fkey(full_name)")
       .eq("status", "completed")
       .order("created_at", { ascending: false });
     
@@ -301,7 +302,7 @@ export default function AdminTransactionsPage() {
     let active = true;
     void supabase
       .from("transactions")
-      .select("id, type, category, amount, description, business_date, created_at")
+      .select("id, type, category, amount, description, business_date, created_at, profiles!transactions_recorded_by_fkey(full_name)")
       .eq("status", "completed")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
@@ -456,31 +457,37 @@ export default function AdminTransactionsPage() {
       const wb = XLSX.utils.book_new();
 
       // 1. Tổng Quan
-      const summaryRows = [
-        { "Chỉ mục": "Doanh thu", "Giá trị": summary.revenue ?? 0 },
-        { "Chỉ mục": "Tổng tiền đơn hàng", "Giá trị": summary.order_total ?? 0 },
-        { "Chỉ mục": "Tạm tính đơn hàng", "Giá trị": summary.order_subtotal ?? 0 },
-        { "Chỉ mục": "Giảm giá đơn hàng", "Giá trị": summary.order_discount ?? 0 },
-        { "Chỉ mục": "Chi phí vận hành", "Giá trị": summary.operating_expense ?? 0 },
-        { "Chỉ mục": "Chênh lệch", "Giá trị": summary.difference ?? 0 },
-        { "Chỉ mục": "Đơn hợp lệ", "Giá trị": summary.total_orders ?? 0 },
-        { "Chỉ mục": "Đơn đã thanh toán", "Giá trị": summary.paid_orders ?? 0 },
-        { "Chỉ mục": "Đơn đã hủy", "Giá trị": summary.cancelled_orders ?? 0 },
-        { "Chỉ mục": "Sản phẩm đã bán", "Giá trị": summary.total_items_sold ?? 0 },
-        { "Chỉ mục": "Giá trị đơn trung bình", "Giá trị": summary.average_order_value ?? 0 },
+      const summaryMoneyRows: ExcelRow[] = [
+        { "Chỉ mục": "Doanh thu", "Số tiền (VND)": summary.revenue ?? 0 },
+        { "Chỉ mục": "Tổng tiền đơn hàng", "Số tiền (VND)": summary.order_total ?? 0 },
+        { "Chỉ mục": "Tạm tính đơn hàng", "Số tiền (VND)": summary.order_subtotal ?? 0 },
+        { "Chỉ mục": "Giảm giá đơn hàng", "Số tiền (VND)": summary.order_discount ?? 0 },
+        { "Chỉ mục": "Chi phí vận hành", "Số tiền (VND)": summary.operating_expense ?? 0 },
+        { "Chỉ mục": "Chênh lệch", "Số tiền (VND)": summary.difference ?? 0 },
+        { "Chỉ mục": "Giá trị đơn trung bình", "Số tiền (VND)": summary.average_order_value ?? 0 },
         ...paymentMethods.map((method) => ({
           "Chỉ mục": `Thanh toán ${paymentMethodLabel(method.payment_method)} (${method.order_count ?? 0} đơn)`,
-          "Giá trị": method.total_amount ?? 0,
+          "Số tiền (VND)": method.total_amount ?? 0,
         })),
+      ];
+      const summaryCountRows: ExcelRow[] = [
+        { "Chỉ mục": "Đơn hợp lệ", "Số lượng": summary.total_orders ?? 0 },
+        { "Chỉ mục": "Đơn đã thanh toán", "Số lượng": summary.paid_orders ?? 0 },
+        { "Chỉ mục": "Đơn đã hủy", "Số lượng": summary.cancelled_orders ?? 0 },
+        { "Chỉ mục": "Sản phẩm đã bán", "Số lượng": summary.total_items_sold ?? 0 },
+      ];
+      const summaryRows: ExcelRow[] = [
+        ...summaryMoneyRows,
+        ...summaryCountRows,
       ];
       appendStyledSheet(
         wb,
         "Tổng Quan",
         `Báo cáo tổng quan tháng ${monthFilter}`,
-        ["Chỉ mục", "Giá trị"],
+        ["Chỉ mục", "Số tiền (VND)", "Số lượng"],
         summaryRows,
-        [34, 20],
-        { moneyHeaders: ["Giá trị"] }
+        [34, 20, 15],
+        { moneyHeaders: ["Số tiền (VND)"], numberHeaders: ["Số lượng"] }
       );
 
       // 2. Doanh Thu Theo Ngày
@@ -1036,6 +1043,12 @@ export default function AdminTransactionsPage() {
                 <div className="flex justify-between gap-4">
                   <span className="text-mid shrink-0">Mô tả</span>
                   <span className="text-right">{selectedTransaction.description}</span>
+                </div>
+              )}
+              {selectedTransaction.profiles?.full_name && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-mid shrink-0">Người thực hiện</span>
+                  <span className="text-right font-medium">{selectedTransaction.profiles.full_name}</span>
                 </div>
               )}
               <div className="flex justify-between">
