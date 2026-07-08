@@ -123,7 +123,7 @@ export function CartPanel() {
               onClick={() => router.push(`/pos/bill/${data.lastOrder!.id}`)}
               className="w-full bg-paper text-ink border border-ink py-3 font-medium uppercase tracking-wider hover:bg-surface transition-colors"
             >
-              Xem Bill (Đơn {data.lastOrder.id.slice(0, 8)})
+              Hóa đơn / In hóa đơn (Đơn {data.lastOrder.id.slice(0, 8)})
             </button>
           </div>
         )}

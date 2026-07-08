@@ -1,18 +1,23 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import dayjs from "dayjs";
+import { PrintButton } from "@/components/PrintButton";
 
 interface BillItem {
   id: string;
   quantity: number;
   sale_price: number;
-  product: { name: string; type: string };
+  product: { name: string; type: string } | null;
 }
 
-export default async function BillPage({ params }: { params: { id: string } }) {
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export default async function BillPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
 
@@ -20,7 +25,15 @@ export default async function BillPage({ params }: { params: { id: string } }) {
     redirect("/login");
   }
 
-  // Fetch order details
+  if (!UUID_PATTERN.test(id)) {
+    return (
+      <div className="print-hide flex min-h-[50vh] flex-col items-center justify-center px-4 text-center">
+        <h1 className="mb-4 text-xl font-bold">Mã hóa đơn không hợp lệ</h1>
+        <Link href="/pos" className="text-blue-500 hover:underline">Quay lại POS</Link>
+      </div>
+    );
+  }
+
   const { data: order, error } = await supabase
     .from("orders")
     .select(`
@@ -29,119 +42,129 @@ export default async function BillPage({ params }: { params: { id: string } }) {
         *,
         product:products ( name, type )
       ),
-      store:stores ( name, address, phone )
+      store:stores ( name, address )
     `)
-    .eq("id", params.id)
-    .single();
+    .eq("id", id)
+    .maybeSingle();
 
-  if (error || !order) {
+  if (error) {
+    console.error("Failed to load bill", { orderId: id, message: error.message });
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh]">
-        <h1 className="text-xl font-bold mb-4">Không tìm thấy hóa đơn</h1>
+      <div className="print-hide flex min-h-[50vh] flex-col items-center justify-center px-4 text-center">
+        <h1 className="mb-4 text-xl font-bold">Không tải được hóa đơn</h1>
         <Link href="/pos" className="text-blue-500 hover:underline">Quay lại POS</Link>
       </div>
     );
   }
 
+  if (!order) {
+    return (
+      <div className="print-hide flex min-h-[50vh] flex-col items-center justify-center px-4 text-center">
+        <h1 className="mb-4 text-xl font-bold">Không tìm thấy hóa đơn</h1>
+        <Link href="/pos" className="text-blue-500 hover:underline">Quay lại POS</Link>
+      </div>
+    );
+  }
+
+  const items = (order.order_items || []) as BillItem[];
+
   return (
-    <div className="container max-w-lg mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <Link 
-          href="/pos" 
-          className="flex items-center gap-2 text-sm text-mid hover:text-white transition-colors"
+    <div className="receipt-page mx-auto max-w-lg px-4 py-8">
+      <div className="print-hide mb-6 flex items-start justify-between gap-4">
+        <Link
+          href="/pos"
+          className="flex items-center gap-2 text-sm text-mid transition-colors hover:text-ink"
         >
           <ArrowLeft size={16} />
           Quay lại POS
         </Link>
-        <button 
-          onClick={() => {}} // Will be handled via client component or just a placeholder for now
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
-          title="Kết nối máy in (Tính năng đang phát triển)"
-        >
-          <Printer size={16} />
-          Kết nối máy in
-        </button>
+        <PrintButton />
       </div>
 
-      <div className="bg-white text-black p-6 rounded-md shadow-lg">
-        <div className={`mb-4 border px-3 py-2 text-center text-sm font-bold uppercase ${
+      <div className="receipt-paper bg-white p-6 text-black shadow-lg">
+        <div className={`receipt-status mb-4 border px-3 py-2 text-center text-sm font-bold uppercase ${
           order.status === "cancelled"
             ? "border-red-300 bg-red-50 text-red-700"
             : "border-green-300 bg-green-50 text-green-700"
         }`}>
           {order.status === "cancelled" ? "Hóa đơn đã hủy" : "Đã thanh toán"}
         </div>
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold uppercase">{order.store.name}</h2>
-          <p className="text-sm text-gray-600">{order.store.address}</p>
-          <p className="text-sm text-gray-600">SĐT: {order.store.phone}</p>
+
+        <div className="mb-6 text-center">
+          <h2 className="text-2xl font-bold uppercase">
+            2Q Store
+          </h2>
+          <p className="text-sm font-semibold text-gray-700">Musky Bar // Innoir in Da Nang</p>
         </div>
 
-        <div className="border-b border-dashed border-gray-300 pb-4 mb-4">
-          <div className="flex justify-between text-sm mb-1">
+        <div className="mb-4 border-b border-dashed border-gray-300 pb-4">
+          <div className="mb-1 flex justify-between gap-3 text-sm">
             <span className="font-semibold">Mã ĐH:</span>
-            <span>{order.order_number}</span>
+            <span className="text-right">{order.order_number}</span>
           </div>
-          <div className="flex justify-between text-sm mb-1">
+          <div className="mb-1 flex justify-between gap-3 text-sm">
             <span className="font-semibold">Ngày:</span>
-            <span>{dayjs(order.created_at).format("DD/MM/YYYY HH:mm")}</span>
+            <span className="text-right">{dayjs(order.created_at).format("DD/MM/YYYY HH:mm")}</span>
           </div>
-          <div className="flex justify-between text-sm mb-1">
+          <div className="mb-1 flex justify-between gap-3 text-sm">
             <span className="font-semibold">Khách hàng:</span>
-            <span>{order.customer_name || 'Khách lẻ'} {order.customer_phone ? `- ${order.customer_phone}` : ''}</span>
+            <span className="text-right">
+              {order.customer_name || "Khách lẻ"}
+              {order.customer_phone ? ` - ${order.customer_phone}` : ""}
+            </span>
           </div>
-          <div className="flex justify-between text-sm">
+          <div className="flex justify-between gap-3 text-sm">
             <span className="font-semibold">P.Thức:</span>
-            <span className="uppercase">{order.payment_method}</span>
+            <span className="text-right uppercase">{order.payment_method}</span>
           </div>
         </div>
 
-        {/* Items */}
-        <div className="border-b border-dashed border-gray-300 pb-4 mb-4 min-h-[150px]">
+        <div className="mb-4 min-h-[150px] border-b border-dashed border-gray-300 pb-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left py-2">Tên món</th>
-                <th className="text-center py-2">SL</th>
-                <th className="text-right py-2">Đơn giá</th>
+                <th className="py-2 text-left">Tên món</th>
+                <th className="py-2 text-center">SL</th>
+                <th className="py-2 text-right">Đơn giá</th>
               </tr>
             </thead>
             <tbody>
-              {(order.order_items as BillItem[]).map((item) => (
+              {items.map((item) => (
                 <tr key={item.id} className="border-b border-gray-100 last:border-0">
                   <td className="py-2 pr-2">
-                    {item.product.name}
-                    <div className="text-xs text-gray-500">{item.product.type}</div>
+                    {item.product?.name || "Sản phẩm"}
+                    {item.product?.type && (
+                      <div className="text-xs text-gray-500">{item.product.type}</div>
+                    )}
                   </td>
-                  <td className="text-center py-2 align-top">{item.quantity}</td>
-                  <td className="text-right py-2 align-top">{formatCurrency(item.sale_price)}</td>
+                  <td className="py-2 text-center align-top">{item.quantity}</td>
+                  <td className="py-2 text-right align-top">{formatCurrency(item.sale_price)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        {/* Totals */}
-        <div className="space-y-2 mb-6">
-          <div className="flex justify-between text-sm">
+        <div className="mb-6 space-y-2">
+          <div className="flex justify-between gap-3 text-sm">
             <span>Tạm tính:</span>
             <span>{formatCurrency(order.subtotal)}</span>
           </div>
-          <div className="flex justify-between text-sm text-red-500">
+          <div className="flex justify-between gap-3 text-sm text-red-500">
             <span>Giảm giá:</span>
             <span>-{formatCurrency(order.discount)}</span>
           </div>
-          <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-200">
+          <div className="mt-2 flex justify-between gap-3 border-t border-gray-200 pt-2 text-lg font-bold">
             <span>Tổng cộng:</span>
             <span>{formatCurrency(order.total)}</span>
           </div>
         </div>
 
-        {/* Footer */}
         <div className="text-center text-sm text-gray-500">
           <p>Cảm ơn quý khách và hẹn gặp lại!</p>
-          <p className="text-xs mt-2">Wifi: 2Q Studio | Pass: 12345678</p>
+          <p className="mt-2 text-xs">Made for the little moments.</p>
+          <p className="text-xs">Keep what feels true.</p>
+          <p className="text-xs">See you somewhere nice.</p>
         </div>
       </div>
     </div>
