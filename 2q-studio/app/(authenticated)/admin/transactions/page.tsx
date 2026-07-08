@@ -15,7 +15,7 @@ interface Transaction {
   description: string | null;
   business_date: string;
   created_at: string;
-  profiles?: { full_name: string } | null;
+  profiles?: { full_name: string }[] | null;
 }
 
 interface FinancialSummary {
@@ -276,8 +276,12 @@ export default function AdminTransactionsPage() {
       .select("id, type, category, amount, description, business_date, created_at, profiles!transactions_recorded_by_fkey(full_name)")
       .eq("status", "completed")
       .order("created_at", { ascending: false });
-    
-    setTransactions((data || []) as Transaction[]);
+
+    const normalized: Transaction[] = (data || []).map((row) => ({
+      ...row,
+      profiles: Array.isArray(row.profiles) ? row.profiles : row.profiles ? [row.profiles] : null,
+    }));
+    setTransactions(normalized);
   }, [supabase]);
 
   const fetchFinancialSummary = useCallback(async () => {
@@ -306,7 +310,12 @@ export default function AdminTransactionsPage() {
       .eq("status", "completed")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
-        if (active) setTransactions((data || []) as Transaction[]);
+        if (!active) return;
+        const normalized: Transaction[] = (data || []).map((row) => ({
+          ...row,
+          profiles: Array.isArray(row.profiles) ? row.profiles : row.profiles ? [row.profiles] : null,
+        }));
+        setTransactions(normalized);
       });
     return () => { active = false; };
   }, [supabase]);
@@ -1045,10 +1054,10 @@ export default function AdminTransactionsPage() {
                   <span className="text-right">{selectedTransaction.description}</span>
                 </div>
               )}
-              {selectedTransaction.profiles?.full_name && (
+              {selectedTransaction.profiles?.[0]?.full_name && (
                 <div className="flex justify-between gap-4">
                   <span className="text-mid shrink-0">Người thực hiện</span>
-                  <span className="text-right font-medium">{selectedTransaction.profiles.full_name}</span>
+                  <span className="text-right font-medium">{selectedTransaction.profiles[0].full_name}</span>
                 </div>
               )}
               <div className="flex justify-between">
