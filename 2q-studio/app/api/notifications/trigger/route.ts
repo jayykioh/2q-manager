@@ -90,13 +90,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: "No active users to notify" });
     }
     
-    const adminIds = activeProfiles.map((p) => p.id);
+    const activeUserIds = activeProfiles.map((p) => p.id);
 
     // Get their subscriptions
     const { data: subscriptions, error: subError } = await supabaseAdmin
       .from("push_subscriptions")
       .select("id, user_id, endpoint, p256dh, auth_key")
-      .in("user_id", adminIds)
+      .in("user_id", activeUserIds)
       .is("revoked_at", null);
 
     if (subError || !subscriptions || subscriptions.length === 0) {
@@ -105,6 +105,8 @@ export async function POST(request: Request) {
 
     // 5. Dispatch web push notifications in parallel
     let deliveredCount = 0;
+    let failedCount = 0;
+    let revokedCount = 0;
     
     await Promise.all(
       (subscriptions as SubscriptionRecord[]).map(async (subscription) => {
@@ -130,6 +132,7 @@ export async function POST(request: Request) {
             .eq("user_id", subscription.user_id);
             
         } catch (error: unknown) {
+          failedCount++;
           const statusCode = statusCodeFrom(error);
           console.error(`Failed to push to endpoint ${subscription.endpoint}`, statusCode);
           
@@ -139,12 +142,20 @@ export async function POST(request: Request) {
               .from("push_subscriptions")
               .update({ revoked_at: new Date().toISOString() })
               .eq("id", subscription.id);
+            revokedCount++;
           }
         }
       })
     );
 
-    return NextResponse.json({ success: true, delivered: deliveredCount });
+    return NextResponse.json({
+      success: true,
+      notificationId: notification.id,
+      subscriptionCount: subscriptions.length,
+      delivered: deliveredCount,
+      failed: failedCount,
+      revoked: revokedCount,
+    });
   } catch (error: unknown) {
     console.error("Trigger notification error", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

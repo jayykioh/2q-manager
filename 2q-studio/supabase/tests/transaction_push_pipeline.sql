@@ -24,6 +24,10 @@ BEGIN
     RAISE EXCEPTION 'Transaction trigger does not atomically create active recipients';
   END IF;
 
+  IF position('role = ''admin''' IN v_trigger_source) > 0 THEN
+    RAISE EXCEPTION 'Transaction trigger still contains role = admin';
+  END IF;
+
   IF position('NEW.order_id IS NULL' IN v_trigger_source) > 0 THEN
     RAISE EXCEPTION 'Transaction trigger still excludes bill-generated transactions';
   END IF;

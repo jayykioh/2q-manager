@@ -21,7 +21,7 @@ export const executeCheckoutOrder = async (
   data: AppData,
   paymentMethod: string,
   orderNotes: string
-): Promise<{ success: boolean; orderId?: string; error?: string }> => {
+): Promise<{ success: boolean; orderId?: string; error?: string; notificationTriggered?: boolean }> => {
   const supabase = createClient();
   const orderItems = data.cart;
   if (orderItems.length === 0) return { success: false, error: "Giỏ hàng trống" };
@@ -47,15 +47,34 @@ export const executeCheckoutOrder = async (
     return { success: false, error: error.message };
   }
 
-  // Trigger web push asynchronously
-  fetch("/api/notifications/trigger", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ orderId: orderId }),
-  }).catch(console.error);
+  // Trigger web push synchronously to wait for result but don't block success
+  let notificationTriggered = false;
+  try {
+    const res = await fetch("/api/notifications/trigger", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId: orderId }),
+    });
+    
+    if (!res.ok) {
+      console.warn("Push notification warning:", await res.text());
+      toast.warning("Tạo đơn thành công nhưng gửi thông báo bị lỗi");
+    } else {
+      const result = await res.json();
+      if (!result.success) {
+        console.warn("Push notification failed inside response:", result);
+        toast.warning("Tạo đơn thành công nhưng gửi thông báo bị lỗi");
+      } else {
+        notificationTriggered = true;
+      }
+    }
+  } catch (error) {
+    console.error("Push notification fetch error:", error);
+    toast.warning("Tạo đơn thành công nhưng không thể kết nối server thông báo");
+  }
 
   // Notify other tabs that checkout succeeded (so they might refresh their products)
   dispatchDataChanged();
 
-  return { success: true, orderId: orderId as string };
+  return { success: true, orderId: orderId as string, notificationTriggered };
 };

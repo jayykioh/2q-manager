@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useAppData } from "@/lib/store/use-app-data";
@@ -52,11 +52,9 @@ export function CartPanel() {
           <div key={item.product_id} className="bg-paper p-3 border border-rule flex justify-between items-center">
             <div>
               <div className="font-display">{item.sku}</div>
-              <input
-                type="number"
-                value={item.sale_price}
-                onChange={(e) => cart.updateSalePrice(item.product_id, Number(e.target.value))}
-                className="font-mono text-sm border border-rule px-1 mt-1 w-24 bg-paper"
+              <CartItemPriceEditor 
+                item={item} 
+                onUpdate={(newPrice) => cart.updateSalePrice(item.product_id, newPrice)} 
               />
             </div>
             <button onClick={() => cart.removeItem(item.product_id)} className="text-destructive p-2 hover:bg-red-50 transition-colors">
@@ -128,6 +126,62 @@ export function CartPanel() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function CartItemPriceEditor({ item, onUpdate }: { item: any; onUpdate: (price: number) => void }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempVal, setTempVal] = useState(item.sale_price.toString());
+
+  const handleSave = () => {
+    setIsEditing(false);
+    const num = Number(tempVal);
+    if (!isNaN(num) && num >= 0) {
+      onUpdate(num);
+    } else {
+      setTempVal(item.sale_price.toString()); // revert
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-1 mt-1">
+        <input
+          type="number"
+          autoFocus
+          value={tempVal}
+          onChange={(e) => setTempVal(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSave();
+            if (e.key === "Escape") {
+              setIsEditing(false);
+              setTempVal(item.sale_price.toString());
+            }
+          }}
+          className="font-mono text-sm border border-rule px-1 w-24 bg-paper focus:outline-none focus:border-ink"
+        />
+        <button onClick={handleSave} className="text-ink p-1 hover:bg-surface rounded-sm">
+          <Check size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 mt-1 group">
+      <span className="font-mono text-sm">{item.sale_price.toLocaleString()}đ</span>
+      <button 
+        onClick={() => {
+          setTempVal(item.sale_price.toString());
+          setIsEditing(true);
+        }}
+        title="Sửa giá"
+        className="text-mid hover:text-ink opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-1"
+      >
+        <Pencil size={12} />
+      </button>
     </div>
   );
 }
