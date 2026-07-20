@@ -17,6 +17,12 @@ export function CartPanel() {
   const handleCheckout = async () => {
     if (data.cart.length === 0) return;
     
+    const hasZeroPriceItem = data.cart.some(item => item.sale_price <= 0);
+    if (hasZeroPriceItem) {
+      toast.error("Vui lòng cập nhật giá lớn hơn 0đ cho tất cả sản phẩm trước khi thanh toán.");
+      return;
+    }
+
     setIsCheckingOut(true);
     const result = await executeCheckoutOrder(data, paymentMethod, orderNotes);
     setIsCheckingOut(false);
