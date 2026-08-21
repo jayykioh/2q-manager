@@ -35,9 +35,9 @@ export function ProductForm({ onSuccess, defaultStoreId, stores }: ProductFormPr
 
       for (const file of files) {
         try {
-          // Thử nén ảnh
+          // Nén full size để preview modal (1200px WebP)
           const compressed = await imageCompression(file, {
-            maxSizeMB: 1,
+            maxSizeMB: 0.8,
             maxWidthOrHeight: 1200,
             useWebWorker: true,
             fileType: "image/webp",
@@ -75,37 +75,52 @@ export function ProductForm({ onSuccess, defaultStoreId, stores }: ProductFormPr
       const note = formData.get("note") as string;
       const storeId = formData.get("store_id") as string || defaultStoreId;
 
-      // 1. Upload Images to R2
+      // 1. Upload Images to R2 (two variants: thumb 400px + full 1200px)
       const uploadedImages = [];
+      const r2PublicDomain = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
+
       for (const [index, file] of images.entries()) {
-        const presignRes = await fetch("/api/upload/presign", {
+        // --- Generate thumb variant (400px, for product grids) ---
+        let thumbFile: File = file;
+        try {
+          thumbFile = await imageCompression(file, {
+            maxSizeMB: 0.15,
+            maxWidthOrHeight: 400,
+            useWebWorker: true,
+            fileType: "image/webp",
+          });
+        } catch {
+          thumbFile = file;
+        }
+
+        // --- Upload full variant ---
+        const presignFull = await fetch("/api/upload/presign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filename: file.name,
-            contentType: file.type,
-            folder: "products",
-          }),
+          body: JSON.stringify({ filename: `full_${index}.webp`, contentType: "image/webp", folder: "products" }),
         });
+        if (!presignFull.ok) throw new Error("Failed to get presigned URL (full)");
+        const { url: fullUrl, key: fullKey } = await presignFull.json();
+        const uploadFull = await fetch(fullUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+        if (!uploadFull.ok) throw new Error("Failed to upload full image");
 
-        if (!presignRes.ok) throw new Error("Failed to get presigned URL");
-        
-        const { url, key } = await presignRes.json();
-        
-        const uploadRes = await fetch(url, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": file.type },
+        // --- Upload thumb variant ---
+        const presignThumb = await fetch("/api/upload/presign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: `thumb_${index}.webp`, contentType: "image/webp", folder: "products" }),
         });
+        if (!presignThumb.ok) throw new Error("Failed to get presigned URL (thumb)");
+        const { url: thumbUrl, key: thumbKey } = await presignThumb.json();
+        const uploadThumb = await fetch(thumbUrl, { method: "PUT", body: thumbFile, headers: { "Content-Type": "image/webp" } });
+        if (!uploadThumb.ok) throw new Error("Failed to upload thumb image");
 
-        if (!uploadRes.ok) throw new Error("Failed to upload image");
-
-        const r2PublicDomain = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
-        
         uploadedImages.push({
-          r2_key: key,
-          public_url: r2PublicDomain ? `${r2PublicDomain}/${key}` : null,
-          blur_data: null, // Skip MVP
+          r2_key: fullKey,
+          public_url: r2PublicDomain ? `${r2PublicDomain}/${fullKey}` : null,
+          thumb_r2_key: thumbKey,
+          thumb_url: r2PublicDomain ? `${r2PublicDomain}/${thumbKey}` : null,
+          blur_data: null,
           width: 1200,
           height: 1200,
           angle: index === 0 ? "front" : "detail",

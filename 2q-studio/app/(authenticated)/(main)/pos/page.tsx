@@ -44,7 +44,7 @@ export default function StaffPosPage() {
     
     let query = supabase
       .from("products")
-      .select("*, product_images(public_url, is_primary, sort_order)", { count: "exact" })
+      .select("*, product_images(public_url, thumb_url, is_primary, sort_order)", { count: "exact" })
       .eq("status", "in_stock")
       .eq("approval_status", "approved")
       .order("created_at", { ascending: false });
@@ -139,7 +139,10 @@ export default function StaffPosPage() {
             const inCart = data.cart.some((i) => i.product_id === p.id);
             const images = p.product_images || [];
             const primaryImage = images.find((img) => img.is_primary) || images[0];
-            const imageUrl = (primaryImage && primaryImage.public_url) ? primaryImage.public_url : FALLBACK_IMAGE;
+            // Use thumb for grid (small, fast) — fallback to full if old image pre-dates thumb pipeline
+            const imageUrl = (primaryImage && (primaryImage.thumb_url || primaryImage.public_url))
+              ? (primaryImage.thumb_url || primaryImage.public_url)!
+              : FALLBACK_IMAGE;
 
             return (
               <button

@@ -6,8 +6,12 @@ const R2_PUBLIC_HOSTNAME = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
 
 const nextConfig: NextConfig = {
   // ── Image optimisation ──────────────────────────────────────────────────────
+  // unoptimized: true → bypass Vercel Image Optimization entirely.
+  // Images are already pre-processed at upload time (thumb + full variants)
+  // and served directly from Cloudflare R2 CDN. This prevents burning through
+  // the free-tier 5,000 Transformations quota.
   images: {
-    // Allow Next.js <Image> to serve & optimise images from Cloudflare R2
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
@@ -15,13 +19,6 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
     ],
-    // Auto-serve AVIF → WebP → JPEG depending on browser support
-    formats: ["image/avif", "image/webp"],
-    // Cache optimised images for 7 days on Vercel edge
-    minimumCacheTTL: 60 * 60 * 24 * 7,
-    // Allowed widths (covers thumb → HD)
-    deviceSizes: [320, 480, 640, 750, 828, 1080, 1200],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
 
   // ── HTTP Headers ────────────────────────────────────────────────────────────

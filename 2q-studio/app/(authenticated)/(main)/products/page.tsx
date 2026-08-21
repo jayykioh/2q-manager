@@ -20,6 +20,7 @@ const FALLBACK_IMAGE =
 
 interface ProductImage {
   public_url: string | null;
+  thumb_url?: string | null;
   is_primary: boolean;
   sort_order: number;
 }
@@ -65,7 +66,7 @@ export default function ProductsPage() {
     
     let query = supabase
       .from("products")
-      .select("*, product_images(public_url, is_primary, sort_order)", { count: "exact" })
+      .select("*, product_images(public_url, thumb_url, is_primary, sort_order)", { count: "exact" })
       .neq("status", "archived")
       .order("updated_at", { ascending: false });
 
@@ -222,7 +223,7 @@ export default function ProductsPage() {
     const images = product.product_images || [];
     if (images.length === 0) return;
     
-    // Sort by sort_order
+    // Sort by sort_order, use full public_url for modal preview
     const sorted = [...images].sort((a, b) => a.sort_order - b.sort_order);
     const urls = sorted.map((img) => img.public_url).filter((url): url is string => Boolean(url));
     
@@ -258,7 +259,10 @@ export default function ProductsPage() {
             // Get the primary image, or the first image, or fallback
             const images = p.product_images || [];
             const primaryImage = images.find((img) => img.is_primary) || images[0];
-            const imageUrl = (primaryImage && primaryImage.public_url) ? primaryImage.public_url : FALLBACK_IMAGE;
+            // Use thumb for grid (small, fast) — fallback to full if old image pre-dates thumb pipeline
+            const imageUrl = (primaryImage && (primaryImage.thumb_url || primaryImage.public_url))
+              ? (primaryImage.thumb_url || primaryImage.public_url)!
+              : FALLBACK_IMAGE;
 
             return (
               <div key={p.id} className="bg-paper border border-rule flex flex-col group relative">

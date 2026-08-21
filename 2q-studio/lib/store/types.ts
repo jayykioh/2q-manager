@@ -1,5 +1,7 @@
 export interface ProductImage {
   public_url: string | null;
+  thumb_r2_key?: string | null; // R2 object key for the 400px thumbnail
+  thumb_url?: string | null;    // Pre-generated 400px thumbnail for grids
   is_primary: boolean;
   sort_order: number;
 }
