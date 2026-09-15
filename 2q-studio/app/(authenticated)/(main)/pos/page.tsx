@@ -108,7 +108,7 @@ export default function StaffPosPage() {
 
 
   return (
-    <div className="p-4 flex flex-col h-full lg:flex-row gap-4 print:hidden">
+    <div className="p-4 flex flex-col h-full lg:flex-row lg:items-start gap-4 print:hidden">
       {/* Product Grid */}
       <div className="flex-1">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">

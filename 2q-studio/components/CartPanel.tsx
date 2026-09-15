@@ -51,7 +51,7 @@ export function CartPanel() {
   };
 
   return (
-    <div className="w-full lg:w-96 bg-surface border border-rule p-4 flex flex-col h-full">
+    <div className="w-full lg:w-96 bg-surface border border-rule p-4 flex flex-col h-full lg:sticky lg:top-[72px] lg:h-[calc(100vh-148px)]">
       <h2 className="font-sans text-xl font-medium mb-4">Giỏ hàng</h2>
       <div className="flex-1 overflow-auto flex flex-col gap-2">
         {data.cart.map((item) => (
