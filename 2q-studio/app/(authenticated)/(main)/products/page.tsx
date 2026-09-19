@@ -385,7 +385,7 @@ export default function ProductsPage() {
       
       {/* Product Form Section */}
       <div className="w-full lg:w-[400px] shrink-0">
-        <div className="sticky top-4">
+        <div className="lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-148px)] lg:overflow-y-auto lg:pr-2">
           <ProductForm onSuccess={() => { setPage(0); fetchProducts(0, filterTier); }} defaultStoreId="11111111-1111-1111-1111-111111111111" stores={stores} />
         </div>
       </div>
